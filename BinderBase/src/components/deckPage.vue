@@ -8,6 +8,7 @@ const formats = ['Commander']
 
 const colors = ['W', 'B', 'U', 'R', 'G']
 const selectedColors = ref([])
+const commanderColors = ref([])
 
 // Deck and card data
 const allDecks = ref([])
@@ -64,6 +65,25 @@ async function selectDeck(deckItem) {
       currentDeck.value = response.deck
       deck.value = response.deck.cards || []
       console.log('Loaded deck with', deck.value.length, 'cards')
+      
+      // If deck has a commander, fetch its colors
+      if (response.deck.commander) {
+        try {
+          const commanderData = await cardAPI.search(response.deck.commander)
+          if (commanderData.success && commanderData.cards.length > 0) {
+            commanderColors.value = commanderData.cards[0].colors || []
+            selectedColors.value = [...commanderColors.value]
+            console.log('Loaded commander colors:', commanderColors.value)
+          }
+        } catch (err) {
+          console.error('Error loading commander colors:', err)
+        }
+      } else {
+        // No commander, reset colors
+        commanderColors.value = []
+        selectedColors.value = []
+      }
+      
       showDeckSelector.value = false
       successMessage.value = `Loaded "${deckItem.name}"`
       setTimeout(() => successMessage.value = null, 2000)
@@ -141,6 +161,13 @@ async function performSearch() {
     const response = await cardAPI.search(searchQuery.value)
     if (response.success) {
       searchResults.value = response.cards
+      
+      // Debug: log the first few cards to see their color data
+      console.log('Search results:', response.cards.slice(0, 3).map(c => ({
+        name: c.name,
+        colors: c.colors
+      })))
+      console.log('Commander colors:', commanderColors.value)
     }
   } catch (err) {
     error.value = 'Search failed: ' + err.message
@@ -151,6 +178,15 @@ async function performSearch() {
 }
 
 function toggleColor(color) {
+  // If there's a commander, only allow toggling commander colors
+  if (commanderColors.value.length > 0) {
+    if (!commanderColors.value.includes(color)) {
+      error.value = `Cannot select ${color} - not in commander's color identity`
+      setTimeout(() => error.value = null, 2000)
+      return
+    }
+  }
+  
   if (selectedColors.value.includes(color)) {
     selectedColors.value = selectedColors.value.filter(c => c !== color)
   } else {
@@ -159,16 +195,48 @@ function toggleColor(color) {
 }
 
 const filteredCards = computed(() => {
-  if (!selectedColors.value.length) {
-    return searchResults.value
+  console.log('Filtering - commanderColors:', commanderColors.value)
+  console.log('Filtering - selectedColors:', selectedColors.value)
+  console.log('Filtering - total search results:', searchResults.value.length)
+  
+  // If commander is set, filter by commander's color identity
+  if (commanderColors.value.length > 0) {
+    const filtered = searchResults.value.filter(card => {
+      // Colorless cards are always legal
+      if (!card.colors || card.colors.length === 0) {
+        return true
+      }
+      
+      // Every color on the card must be in the commander's identity
+      const isLegal = card.colors.every(color => commanderColors.value.includes(color))
+      
+      if (!isLegal) {
+        console.log(`Filtering out ${card.name}: has colors ${JSON.stringify(card.colors)}, commander has ${JSON.stringify(commanderColors.value)}`)
+      }
+      
+      return isLegal
+    })
+    
+    console.log('Filtered to', filtered.length, 'cards')
+    return filtered
   }
-
-  return searchResults.value.filter(card => {
-    if (!card.colors || card.colors.length === 0) {
-      return true // Colorless cards always match
-    }
-    return card.colors.some(color => selectedColors.value.includes(color))
-  })
+  
+  // If no commander but colors are selected, filter by selected colors
+  if (selectedColors.value.length > 0) {
+    return searchResults.value.filter(card => {
+      if (!card.colors || card.colors.length === 0) {
+        return true // Colorless cards always match
+      }
+      
+      // When manually filtering (no commander), show cards that have ANY of the selected colors
+      // But also ensure the card doesn't have colors outside what's selected
+      return card.colors.every(color => selectedColors.value.includes(color))
+    })
+  }
+  
+  // No filtering
+  console.log('No filtering applied')
+  return searchResults.value
 })
 
 async function addToDeck(card) {
@@ -270,23 +338,23 @@ async function setCommander(card) {
   if (!currentDeck.value) return
 
   try {
-    // Update the deck's commander in the database
-    const { data, error: updateError } = await DBClient
-      .from('deckname')
-      .update({ commander: card.name })
-      .eq('id', currentDeck.value.id)
-      .select()
-      .single()
-
-    if (updateError) throw updateError
-
-    // Update local state
-    currentDeck.value.commander = card.name
-    showCommanderSelector.value = false
-    commanderSearchQuery.value = ''
-    commanderSearchResults.value = []
-    successMessage.value = `Set ${card.name} as commander`
-    setTimeout(() => successMessage.value = null, 2000)
+    // Use the API to update the commander
+    const response = await deckAPI.setCommander(currentDeck.value.id, card.name)
+    
+    if (response.success) {
+      // Update local state
+      currentDeck.value.commander = card.name
+      
+      // Set the commander colors for filtering
+      commanderColors.value = card.colors || []
+      selectedColors.value = [...commanderColors.value]
+      
+      showCommanderSelector.value = false
+      commanderSearchQuery.value = ''
+      commanderSearchResults.value = []
+      successMessage.value = `Set ${card.name} as commander`
+      setTimeout(() => successMessage.value = null, 2000)
+    }
   } catch (err) {
     error.value = 'Failed to set commander: ' + err.message
     setTimeout(() => error.value = null, 3000)
@@ -297,24 +365,21 @@ async function removeCommander() {
   if (!currentDeck.value || !confirm('Remove commander from this deck?')) return
 
   try {
-    const { error: updateError } = await DBClient
-      .from('deckname')
-      .update({ commander: null })
-      .eq('id', currentDeck.value.id)
-
-    if (updateError) throw updateError
-
-    currentDeck.value.commander = null
-    successMessage.value = 'Commander removed'
-    setTimeout(() => successMessage.value = null, 2000)
+    // Use the API to remove the commander (set to null)
+    const response = await deckAPI.setCommander(currentDeck.value.id, null)
+    
+    if (response.success) {
+      currentDeck.value.commander = null
+      commanderColors.value = []
+      selectedColors.value = []
+      successMessage.value = 'Commander removed'
+      setTimeout(() => successMessage.value = null, 2000)
+    }
   } catch (err) {
     error.value = 'Failed to remove commander: ' + err.message
     setTimeout(() => error.value = null, 3000)
   }
 }
-
-// Import DBClient for commander updates
-import { DBClient } from '../services/api.js'
 
 // Get recommendations based on current deck
 async function loadRecommendations() {
@@ -376,6 +441,67 @@ async function addRecommendedCard(cardName) {
     error.value = 'Failed to add card: ' + err.message
     setTimeout(() => error.value = null, 3000)
   }
+}
+
+// Store for card images we've fetched
+const cardImageCache = ref({})
+const hoveredRecommendation = ref(null)
+const hoveredCommander = ref(null)
+
+async function handleRecommendationHover(card) {
+  hoveredRecommendation.value = { name: card.name, image: null }
+  
+  // Check if we already have this card's image cached
+  if (cardImageCache.value[card.name]) {
+    hoveredRecommendation.value.image = cardImageCache.value[card.name]
+    return
+  }
+  
+  // Fetch the card image from Scryfall
+  try {
+    const response = await cardAPI.search(card.name)
+    if (response.success && response.cards.length > 0) {
+      const cardImage = response.cards[0].image
+      cardImageCache.value[card.name] = cardImage
+      if (hoveredRecommendation.value?.name === card.name) {
+        hoveredRecommendation.value.image = cardImage
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching card image:', err)
+  }
+}
+
+function handleRecommendationLeave() {
+  hoveredRecommendation.value = null
+}
+
+async function handleCommanderHover(commanderName) {
+  hoveredCommander.value = { name: commanderName, image: null }
+  
+  // Check if we already have this card's image cached
+  if (cardImageCache.value[commanderName]) {
+    hoveredCommander.value.image = cardImageCache.value[commanderName]
+    return
+  }
+  
+  // Fetch the card image from Scryfall
+  try {
+    const response = await cardAPI.search(commanderName)
+    if (response.success && response.cards.length > 0) {
+      const cardImage = response.cards[0].image
+      cardImageCache.value[commanderName] = cardImage
+      if (hoveredCommander.value?.name === commanderName) {
+        hoveredCommander.value.image = cardImage
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching commander image:', err)
+  }
+}
+
+function handleCommanderLeave() {
+  hoveredCommander.value = null
 }
 </script>
 
@@ -490,6 +616,8 @@ async function addRecommendedCard(cardName) {
               :key="card.name"
               class="recommendation-item"
               @click="addRecommendedCard(card.name)"
+              @mouseenter="handleRecommendationHover(card)"
+              @mouseleave="handleRecommendationLeave"
             >
               <div class="rec-info">
                 <h4>{{ card.name }}</h4>
@@ -604,10 +732,18 @@ async function addRecommendedCard(cardName) {
               class="chip"
               @click="toggleColor(color)"
               :aria-pressed="selectedColors.includes(color)"
+              :disabled="commanderColors.length > 0 && !commanderColors.includes(color)"
+              :class="{ 
+                'commander-color': commanderColors.includes(color),
+                'disabled': commanderColors.length > 0 && !commanderColors.includes(color)
+              }"
             >
               {{ color }}
             </button>
           </div>
+          <p v-if="commanderColors.length > 0" class="color-hint">
+            Only showing commander's color identity
+          </p>
         </div>
       </aside>
 
@@ -680,7 +816,13 @@ async function addRecommendedCard(cardName) {
           </div>
           
           <div v-if="currentDeck.commander" class="commander-display">
-            <div class="commander-name">⭐ {{ currentDeck.commander }}</div>
+            <div 
+              class="commander-name"
+              @mouseenter="handleCommanderHover(currentDeck.commander)"
+              @mouseleave="handleCommanderLeave"
+            >
+              ⭐ {{ currentDeck.commander }}
+            </div>
             <button @click="removeCommander" class="btn-remove" title="Remove commander">×</button>
           </div>
           
@@ -730,6 +872,32 @@ async function addRecommendedCard(cardName) {
       }"
     >
       <img :src="hoveredCard.card_image" :alt="hoveredCard.card_name" />
+    </div>
+
+    <!-- Recommendation Card Preview Tooltip -->
+    <div 
+      v-if="hoveredRecommendation && hoveredRecommendation.image" 
+      class="card-preview"
+      :style="{ 
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: 10001
+      }"
+    >
+      <img :src="hoveredRecommendation.image" :alt="hoveredRecommendation.name" />
+    </div>
+
+    <!-- Commander Card Preview Tooltip -->
+    <div 
+      v-if="hoveredCommander && hoveredCommander.image" 
+      class="card-preview"
+      :style="{ 
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: 10001
+      }"
+    >
+      <img :src="hoveredCommander.image" :alt="hoveredCommander.name" />
     </div>
 
     <footer class="footer">Built with love for MTG deck building.</footer>
@@ -1122,6 +1290,7 @@ async function addRecommendedCard(cardName) {
   font-weight: 600;
   font-size: 1rem;
   color: var(--accent);
+  cursor: help;
 }
 
 .commander-placeholder {

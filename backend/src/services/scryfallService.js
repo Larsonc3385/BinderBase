@@ -27,7 +27,8 @@ export async function searchCardByName(cardName) {
       scryfallId: cardData.id,
       type: cardData.type_line,
       manaCost: cardData.mana_cost,
-      colors: cardData.colors || [],
+      // Use color_identity for Commander legality (includes mana cost + rules text)
+      colors: cardData.color_identity || [],
       oracleText: cardData.oracle_text
     };
   } catch (error) {
@@ -58,7 +59,8 @@ export async function searchCards(query) {
       scryfallId: card.id,
       type: card.type_line,
       manaCost: card.mana_cost,
-      colors: card.colors || []
+      // Use color_identity for Commander legality (includes mana cost + rules text)
+      colors: card.color_identity || []
     }));
   } catch (error) {
     console.error('Error searching cards:', error);
