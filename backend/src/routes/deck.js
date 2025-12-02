@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { DBClient } from '../data/supabaseController.js';
 import { searchCardByName, searchCards, autocomplete } from '../services/scryfallService.js';
+import { getCommanderRecommendations } from '../services/edhrecService.js';
 
 // Add logging middleware for debugging
 const logRequest = (req, res, next) => {
@@ -66,6 +67,31 @@ router.post('/decks', async (req, res) => {
     res.json({ success: true, deck: data });
   } catch (error) {
     console.error('Error creating deck:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * PUT /decks/:deckId/commander
+ * Set or update the commander for a deck
+ */
+router.put('/decks/:deckId/commander', async (req, res) => {
+  try {
+    const { deckId } = req.params;
+    const { commander } = req.body;
+
+    const { data, error } = await DBClient
+      .from('deckname')
+      .update({ commander })
+      .eq('id', deckId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, deck: data });
+  } catch (error) {
+    console.error('Error setting commander:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -275,6 +301,24 @@ router.get('/cards/autocomplete', async (req, res) => {
     res.json({ success: true, suggestions });
   } catch (error) {
     console.error('Error getting autocomplete:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /recommendations/commander/:commanderName
+ * Get EDHRec recommendations for a specific commander
+ */
+router.get('/recommendations/commander/:commanderName', async (req, res) => {
+  try {
+    const { commanderName } = req.params;
+    
+    console.log('Fetching recommendations for commander:', commanderName);
+    const recommendations = await getCommanderRecommendations(commanderName);
+    
+    res.json({ success: true, recommendations });
+  } catch (error) {
+    console.error('Error getting commander recommendations:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

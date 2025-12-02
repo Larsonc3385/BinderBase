@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { deckAPI, cardAPI } from '../services/api.js'
+import { ref, computed, onMounted, watch } from 'vue'
+import { deckAPI, cardAPI, recommendationsAPI } from '../services/api.js'
 
 const searchQuery = ref('')
 const selectedFormat = ref('Commander')
@@ -10,14 +10,31 @@ const colors = ['W', 'B', 'U', 'R', 'G']
 const selectedColors = ref([])
 
 // Deck and card data
+const allDecks = ref([])
 const currentDeck = ref(null)
 const deck = ref([])
 const searchResults = ref([])
 const isSearching = ref(false)
 const error = ref(null)
 const successMessage = ref(null)
+const showDeckSelector = ref(false)
+const showNewDeckForm = ref(false)
+const newDeckName = ref('')
+const hoveredCard = ref(null)
 
-// Load the current deck on mount
+// Commander
+const showCommanderSelector = ref(false)
+const commanderSearchQuery = ref('')
+const commanderSearchResults = ref([])
+const isSearchingCommander = ref(false)
+
+// Recommendations
+const showRecommendations = ref(false)
+const recommendations = ref(null)
+const isLoadingRecommendations = ref(false)
+const recommendationType = ref('topCards')
+
+// Load all decks on mount
 onMounted(async () => {
   await loadDecks()
 })
@@ -25,24 +42,89 @@ onMounted(async () => {
 async function loadDecks() {
   try {
     const response = await deckAPI.getAll()
-    if (response.success && response.decks.length > 0) {
-      // Load the first deck by default
-      await loadDeck(response.decks[0].id)
+    if (response.success) {
+      allDecks.value = response.decks
+      if (response.decks.length > 0 && !currentDeck.value) {
+        // Load the first deck by default
+        await selectDeck(response.decks[0])
+      }
     }
   } catch (err) {
     error.value = 'Failed to load decks: ' + err.message
   }
 }
 
-async function loadDeck(deckId) {
+async function selectDeck(deckItem) {
   try {
-    const response = await deckAPI.getById(deckId)
+    console.log('Selecting deck:', deckItem.name, 'ID:', deckItem.id)
+    const response = await deckAPI.getById(deckItem.id)
+    console.log('Deck response:', response)
+    
     if (response.success) {
       currentDeck.value = response.deck
       deck.value = response.deck.cards || []
+      console.log('Loaded deck with', deck.value.length, 'cards')
+      showDeckSelector.value = false
+      successMessage.value = `Loaded "${deckItem.name}"`
+      setTimeout(() => successMessage.value = null, 2000)
     }
   } catch (err) {
+    console.error('Error selecting deck:', err)
     error.value = 'Failed to load deck: ' + err.message
+    setTimeout(() => error.value = null, 5000)
+  }
+}
+
+async function createNewDeck() {
+  if (!newDeckName.value.trim()) {
+    error.value = 'Please enter a deck name'
+    setTimeout(() => error.value = null, 3000)
+    return
+  }
+
+  console.log('Creating new deck:', newDeckName.value)
+
+  try {
+    const response = await deckAPI.create({
+      name: newDeckName.value,
+      format: selectedFormat.value
+    })
+    
+    console.log('Create deck response:', response)
+    
+    if (response.success) {
+      await loadDecks()
+      await selectDeck(response.deck)
+      newDeckName.value = ''
+      showNewDeckForm.value = false
+      successMessage.value = 'Deck created successfully!'
+      setTimeout(() => successMessage.value = null, 2000)
+    }
+  } catch (err) {
+    console.error('Error creating deck:', err)
+    error.value = 'Failed to create deck: ' + err.message
+    setTimeout(() => error.value = null, 5000)
+  }
+}
+
+async function deleteDeck(deckToDelete) {
+  if (!confirm(`Are you sure you want to delete "${deckToDelete.name}"? This will remove all cards in the deck.`)) {
+    return
+  }
+
+  try {
+    await deckAPI.delete(deckToDelete.id)
+    await loadDecks()
+    
+    if (currentDeck.value?.id === deckToDelete.id) {
+      currentDeck.value = null
+      deck.value = []
+    }
+    
+    successMessage.value = 'Deck deleted'
+    setTimeout(() => successMessage.value = null, 2000)
+  } catch (err) {
+    error.value = 'Failed to delete deck: ' + err.message
   }
 }
 
@@ -92,26 +174,40 @@ const filteredCards = computed(() => {
 async function addToDeck(card) {
   if (!currentDeck.value) {
     error.value = 'Please create or select a deck first'
+    showDeckSelector.value = true
+    setTimeout(() => error.value = null, 5000)
     return
   }
 
+  console.log('Adding card:', card.name, 'to deck:', currentDeck.value.name)
+
   try {
     const response = await deckAPI.addCard(currentDeck.value.id, card.name, 1)
+    console.log('Add card response:', response)
+    
     if (response.success) {
       // Reload the deck to get updated card list
-      await loadDeck(currentDeck.value.id)
+      const deckResponse = await deckAPI.getById(currentDeck.value.id)
+      console.log('Reloaded deck:', deckResponse)
+      
+      if (deckResponse.success) {
+        deck.value = deckResponse.deck.cards || []
+        console.log('Updated deck list, now has', deck.value.length, 'cards')
+      }
       successMessage.value = `Added ${card.name} to deck`
       setTimeout(() => successMessage.value = null, 3000)
     }
   } catch (err) {
+    console.error('Error adding card:', err)
     error.value = 'Failed to add card: ' + err.message
+    setTimeout(() => error.value = null, 5000)
   }
 }
 
 async function updateQuantity(card, newQuantity) {
   try {
     await deckAPI.updateCardQuantity(currentDeck.value.id, card.id, newQuantity)
-    await loadDeck(currentDeck.value.id)
+    await selectDeck(currentDeck.value)
   } catch (err) {
     error.value = 'Failed to update quantity: ' + err.message
   }
@@ -120,7 +216,7 @@ async function updateQuantity(card, newQuantity) {
 async function removeFromDeck(card) {
   try {
     await deckAPI.removeCard(currentDeck.value.id, card.id)
-    await loadDeck(currentDeck.value.id)
+    await selectDeck(currentDeck.value)
     successMessage.value = `Removed ${card.card_name} from deck`
     setTimeout(() => successMessage.value = null, 3000)
   } catch (err) {
@@ -137,13 +233,150 @@ async function clearDeck() {
     for (const card of deck.value) {
       await deckAPI.removeCard(currentDeck.value.id, card.id)
     }
-    await loadDeck(currentDeck.value.id)
+    await selectDeck(currentDeck.value)
   } catch (err) {
     error.value = 'Failed to clear deck: ' + err.message
   }
 }
 
 const deckCount = computed(() => deck.value.reduce((sum, e) => sum + e.quantity, 0))
+
+// Commander functions
+async function searchForCommander() {
+  if (!commanderSearchQuery.value.trim()) {
+    commanderSearchResults.value = []
+    return
+  }
+
+  isSearchingCommander.value = true
+
+  try {
+    const response = await cardAPI.search(commanderSearchQuery.value + ' is:commander')
+    if (response.success) {
+      commanderSearchResults.value = response.cards.filter(card => 
+        card.type.toLowerCase().includes('legendary') && 
+        card.type.toLowerCase().includes('creature')
+      )
+    }
+  } catch (err) {
+    error.value = 'Failed to search commanders: ' + err.message
+    setTimeout(() => error.value = null, 3000)
+  } finally {
+    isSearchingCommander.value = false
+  }
+}
+
+async function setCommander(card) {
+  if (!currentDeck.value) return
+
+  try {
+    // Update the deck's commander in the database
+    const { data, error: updateError } = await DBClient
+      .from('deckname')
+      .update({ commander: card.name })
+      .eq('id', currentDeck.value.id)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
+
+    // Update local state
+    currentDeck.value.commander = card.name
+    showCommanderSelector.value = false
+    commanderSearchQuery.value = ''
+    commanderSearchResults.value = []
+    successMessage.value = `Set ${card.name} as commander`
+    setTimeout(() => successMessage.value = null, 2000)
+  } catch (err) {
+    error.value = 'Failed to set commander: ' + err.message
+    setTimeout(() => error.value = null, 3000)
+  }
+}
+
+async function removeCommander() {
+  if (!currentDeck.value || !confirm('Remove commander from this deck?')) return
+
+  try {
+    const { error: updateError } = await DBClient
+      .from('deckname')
+      .update({ commander: null })
+      .eq('id', currentDeck.value.id)
+
+    if (updateError) throw updateError
+
+    currentDeck.value.commander = null
+    successMessage.value = 'Commander removed'
+    setTimeout(() => successMessage.value = null, 2000)
+  } catch (err) {
+    error.value = 'Failed to remove commander: ' + err.message
+    setTimeout(() => error.value = null, 3000)
+  }
+}
+
+// Import DBClient for commander updates
+import { DBClient } from '../services/api.js'
+
+// Get recommendations based on current deck
+async function loadRecommendations() {
+  if (!currentDeck.value) {
+    error.value = 'Please select a deck first'
+    setTimeout(() => error.value = null, 3000)
+    return
+  }
+
+  isLoadingRecommendations.value = true
+  showRecommendations.value = true
+
+  try {
+    // Try to get commander-based recommendations if a commander is set
+    if (currentDeck.value.commander) {
+      const response = await recommendationsAPI.getForCommander(currentDeck.value.commander)
+      if (response.success) {
+        recommendations.value = response.recommendations
+      }
+    } else {
+      // Fall back to color-based recommendations
+      // Determine colors from deck cards
+      const deckColors = new Set()
+      deck.value.forEach(card => {
+        // This is simplified - in a real app you'd get colors from card data
+        // For now, just use selected colors or default to colorless
+      })
+      
+      error.value = 'Set a commander for better recommendations'
+      setTimeout(() => error.value = null, 5000)
+    }
+  } catch (err) {
+    error.value = 'Failed to load recommendations: ' + err.message
+    setTimeout(() => error.value = null, 5000)
+  } finally {
+    isLoadingRecommendations.value = false
+  }
+}
+
+const currentRecommendations = computed(() => {
+  if (!recommendations.value) return []
+  return recommendations.value[recommendationType.value] || []
+})
+
+async function addRecommendedCard(cardName) {
+  if (!currentDeck.value) return
+  
+  try {
+    const response = await deckAPI.addCard(currentDeck.value.id, cardName, 1)
+    if (response.success) {
+      const deckResponse = await deckAPI.getById(currentDeck.value.id)
+      if (deckResponse.success) {
+        deck.value = deckResponse.deck.cards || []
+      }
+      successMessage.value = `Added ${cardName} to deck`
+      setTimeout(() => successMessage.value = null, 2000)
+    }
+  } catch (err) {
+    error.value = 'Failed to add card: ' + err.message
+    setTimeout(() => error.value = null, 3000)
+  }
+}
 </script>
 
 <template>
@@ -158,9 +391,176 @@ const deckCount = computed(() => deck.value.reduce((sum, e) => sum + e.quantity,
       </div>
 
       <div class="header-actions">
-        <button class="btn" @click="loadDecks">Refresh</button>
+        <button class="btn ghost" @click="loadRecommendations" :disabled="isLoadingRecommendations">
+          💡 {{ isLoadingRecommendations ? 'Loading...' : 'Suggestions' }}
+        </button>
+        <button class="btn ghost" @click="showDeckSelector = !showDeckSelector" style="min-width: 150px;">
+          📚 {{ currentDeck ? currentDeck.name : 'Select Deck' }}
+        </button>
+        <button class="btn" @click="showNewDeckForm = true">+ New Deck</button>
       </div>
     </header>
+
+    <!-- Deck Selector Modal -->
+    <div class="modal-backdrop" :class="{ open: showDeckSelector }" @click.self="showDeckSelector = false">
+      <div class="modal">
+        <h2>Select a Deck</h2>
+        <div class="deck-selector-list">
+          <div 
+            v-for="deckItem in allDecks" 
+            :key="deckItem.id"
+            class="deck-selector-item"
+            :class="{ active: currentDeck?.id === deckItem.id }"
+            @click="selectDeck(deckItem)"
+          >
+            <div class="deck-info">
+              <h3>{{ deckItem.name }}</h3>
+              <p class="small">{{ deckItem.format }}</p>
+            </div>
+            <button 
+              @click.stop="deleteDeck(deckItem)" 
+              class="btn-remove"
+              title="Delete deck"
+            >
+              ×
+            </button>
+          </div>
+          <div v-if="allDecks.length === 0" class="empty-state">
+            <p>No decks yet. Create your first deck!</p>
+          </div>
+        </div>
+        <button class="btn" @click="showDeckSelector = false">Close</button>
+      </div>
+    </div>
+
+    <!-- New Deck Form Modal -->
+    <div class="modal-backdrop" :class="{ open: showNewDeckForm }" @click.self="showNewDeckForm = false">
+      <div class="modal">
+        <h2>Create New Deck</h2>
+        <div class="form-group">
+          <label>Deck Name</label>
+          <input 
+            v-model="newDeckName" 
+            type="text" 
+            placeholder="Enter deck name..."
+            @keyup.enter="createNewDeck"
+            class="input"
+          />
+        </div>
+        <div class="form-group">
+          <label>Format</label>
+          <select v-model="selectedFormat" class="input">
+            <option>Commander</option>
+            <option>Modern</option>
+            <option>Standard</option>
+            <option>Legacy</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" @click="showNewDeckForm = false">Cancel</button>
+          <button class="btn" @click="createNewDeck">Create Deck</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendations Modal -->
+    <div class="modal-backdrop recommendations-modal" :class="{ open: showRecommendations }" @click.self="showRecommendations = false">
+      <div class="modal modal-large">
+        <div class="modal-header">
+          <h2>💡 Card Suggestions</h2>
+          <button class="btn-close" @click="showRecommendations = false">×</button>
+        </div>
+        
+        <div v-if="recommendations" class="recommendations-content">
+          <div class="recommendations-tabs">
+            <button 
+              v-for="tab in ['topCards', 'creatures', 'instants', 'sorceries', 'artifacts', 'enchantments', 'lands']" 
+              :key="tab"
+              class="tab-btn"
+              :class="{ active: recommendationType === tab }"
+              @click="recommendationType = tab"
+            >
+              {{ tab === 'topCards' ? 'Top Cards' : tab.charAt(0).toUpperCase() + tab.slice(1) }}
+            </button>
+          </div>
+
+          <div class="recommendations-list">
+            <div 
+              v-for="card in currentRecommendations" 
+              :key="card.name"
+              class="recommendation-item"
+              @click="addRecommendedCard(card.name)"
+            >
+              <div class="rec-info">
+                <h4>{{ card.name }}</h4>
+                <div class="rec-stats">
+                  <span v-if="card.inclusion" class="stat-badge inclusion">
+                    📊 {{ card.inclusion }}%
+                  </span>
+                  <span v-if="card.synergy" class="stat-badge synergy">
+                    ⚡ {{ card.synergy }}%
+                  </span>
+                </div>
+              </div>
+              <button class="btn small">+ Add</button>
+            </div>
+
+            <div v-if="currentRecommendations.length === 0" class="empty-state">
+              <p>No recommendations available for this category</p>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="empty-state">
+          <p>Loading recommendations...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commander Selector Modal -->
+    <div class="modal-backdrop" :class="{ open: showCommanderSelector }" @click.self="showCommanderSelector = false">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Choose Your Commander</h2>
+          <button class="btn-close" @click="showCommanderSelector = false">×</button>
+        </div>
+
+        <div class="search">
+          <input 
+            v-model="commanderSearchQuery" 
+            type="search" 
+            placeholder="Search for a legendary creature..."
+            @keyup.enter="searchForCommander"
+          />
+          <button class="btn small" @click="searchForCommander" :disabled="isSearchingCommander">
+            {{ isSearchingCommander ? 'Searching...' : 'Search' }}
+          </button>
+        </div>
+
+        <div class="commander-results">
+          <div 
+            v-for="card in commanderSearchResults" 
+            :key="card.name"
+            class="commander-result-item"
+            @click="setCommander(card)"
+          >
+            <img v-if="card.image" :src="card.image" :alt="card.name" class="commander-img" />
+            <div class="commander-info">
+              <h4>{{ card.name }}</h4>
+              <p class="small">{{ card.type }}</p>
+            </div>
+          </div>
+
+          <div v-if="commanderSearchResults.length === 0 && commanderSearchQuery" class="empty-state">
+            <p>No commanders found. Try a different search.</p>
+          </div>
+
+          <div v-if="commanderSearchResults.length === 0 && !commanderSearchQuery" class="empty-state">
+            <p>Search for a legendary creature to set as your commander</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Error/Success Messages -->
     <div v-if="error" class="alert alert-error">{{ error }}</div>
@@ -262,12 +662,36 @@ const deckCount = computed(() => deck.value.reduce((sum, e) => sum + e.quantity,
       <aside class="deck-panel">
         <div class="deck-title">
           <div>
-            <h3>{{ currentDeck?.name || 'Current Deck' }}</h3>
-            <div class="small deck-stats">{{ deckCount }} cards</div>
+            <h3>{{ currentDeck?.name || 'No Deck Selected' }}</h3>
+            <div class="small deck-stats">{{ deckCount }} cards ({{ deck.length }} unique)</div>
           </div>
           <div>
-            <button class="btn small" @click="clearDeck">Clear</button>
+            <button class="btn small" @click="clearDeck" :disabled="!currentDeck">Clear</button>
           </div>
+        </div>
+
+        <!-- Commander Section -->
+        <div v-if="currentDeck" class="commander-section">
+          <div class="section-header">
+            <h4>Commander</h4>
+            <button class="btn small" @click="showCommanderSelector = true">
+              {{ currentDeck.commander ? 'Change' : 'Set Commander' }}
+            </button>
+          </div>
+          
+          <div v-if="currentDeck.commander" class="commander-display">
+            <div class="commander-name">⭐ {{ currentDeck.commander }}</div>
+            <button @click="removeCommander" class="btn-remove" title="Remove commander">×</button>
+          </div>
+          
+          <div v-else class="commander-placeholder">
+            <p class="small">No commander set. Click "Set Commander" to choose one.</p>
+          </div>
+        </div>
+
+        <!-- The 99 Section -->
+        <div class="section-header">
+          <h4>The 99</h4>
         </div>
 
         <div class="deck-list">
@@ -277,15 +701,35 @@ const deckCount = computed(() => deck.value.reduce((sum, e) => sum + e.quantity,
               <div class="qty">{{ card.quantity }}</div>
               <button @click="updateQuantity(card, card.quantity + 1)" class="qty-btn">+</button>
             </div>
-            <div class="name">{{ card.card_name }}</div>
+            <div 
+              class="name card-hover" 
+              @mouseenter="hoveredCard = card"
+              @mouseleave="hoveredCard = null"
+            >
+              {{ card.card_name }}
+            </div>
             <button @click="removeFromDeck(card)" class="btn-remove" title="Remove card">×</button>
           </div>
 
           <div v-if="deck.length === 0" class="empty-state">
-            <p>No cards in deck. Click cards from search results to add them.</p>
+            <p v-if="!currentDeck">Select or create a deck to get started.</p>
+            <p v-else>No cards in deck. Click cards from search results to add them.</p>
           </div>
         </div>
       </aside>
+    </div>
+
+    <!-- Card Preview Tooltip -->
+    <div 
+      v-if="hoveredCard && hoveredCard.card_image" 
+      class="card-preview"
+      :style="{ 
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: 10000
+      }"
+    >
+      <img :src="hoveredCard.card_image" :alt="hoveredCard.card_name" />
     </div>
 
     <footer class="footer">Built with love for MTG deck building.</footer>
@@ -369,5 +813,366 @@ const deckCount = computed(() => deck.value.reduce((sum, e) => sum + e.quantity,
   justify-content: center;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+/* Deck Selector Styles */
+.deck-selector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.deck-selector-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deck-selector-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent);
+}
+
+.deck-selector-item.active {
+  background: rgba(125, 211, 252, 0.1);
+  border-color: var(--accent);
+}
+
+.deck-info h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.deck-info p {
+  margin: 0.25rem 0 0 0;
+}
+
+/* Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.9);
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.modal-backdrop.open {
+  display: flex !important;
+}
+
+.modal {
+  width: min(500px, 90%);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.6);
+  border: 1px solid var(--card-border);
+  position: relative;
+  z-index: 10000;
+}
+
+.modal h2 {
+  margin: 0 0 1rem 0;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+/* Card Hover Preview */
+.card-hover {
+  cursor: help;
+  position: relative;
+}
+
+.card-preview {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+.card-preview img {
+  width: 250px;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--accent);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+@media (max-width: 1100px) {
+  .card-preview {
+    display: none;
+  }
+}
+
+/* Recommendations Modal Styles */
+.recommendations-modal .modal {
+  max-width: 900px;
+}
+
+.modal-large {
+  width: min(900px, 95%);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 2rem;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  line-height: 1;
+}
+
+.btn-close:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.recommendations-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recommendations-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.tab-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.recommendation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recommendation-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent);
+  transform: translateX(4px);
+}
+
+.rec-info h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.rec-info p {
+  margin: 0.15rem 0 0 0;
+  font-size: 0.85rem;
+}
+
+.rec-stats {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.stat-badge.inclusion {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.stat-badge.synergy {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+/* Commander Section Styles */
+.commander-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 140, 0, 0.05));
+  border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.section-header h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.commander-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border: 1px solid var(--glass);
+}
+
+.commander-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.commander-placeholder {
+  padding: 0.75rem;
+  text-align: center;
+  border: 1px dashed rgba(255, 215, 0, 0.3);
+  border-radius: 6px;
+}
+
+/* Commander Search Results */
+.commander-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.commander-result-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.commander-result-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent);
+  transform: translateX(4px);
+}
+
+.commander-img {
+  width: 60px;
+  height: 84px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.commander-info h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+}
+
+.commander-info p {
+  margin: 0;
 }
 </style>

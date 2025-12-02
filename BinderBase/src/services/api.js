@@ -66,6 +66,16 @@ export const deckAPI = {
   },
 
   /**
+   * Set or update commander for a deck
+   */
+  async setCommander(deckId, commanderName) {
+    return apiFetch(`/decks/${deckId}/commander`, {
+      method: 'PUT',
+      body: JSON.stringify({ commander: commanderName }),
+    })
+  },
+
+  /**
    * Add a card to a deck
    */
   async addCard(deckId, cardName, quantity = 1) {
@@ -109,5 +119,15 @@ export const cardAPI = {
    */
   async autocomplete(query) {
     return apiFetch(`/cards/autocomplete?q=${encodeURIComponent(query)}`)
+  },
+}
+
+// EDHRec recommendations
+export const recommendationsAPI = {
+  /**
+   * Get recommendations for a commander
+   */
+  async getForCommander(commanderName) {
+    return apiFetch(`/recommendations/commander/${encodeURIComponent(commanderName)}`)
   },
 }
