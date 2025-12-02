@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { deckAPI, cardAPI } from '../services/api.js'
 
 const searchQuery = ref('')
 const selectedFormat = ref('Commander')
@@ -8,20 +9,65 @@ const formats = ['Commander']
 const colors = ['W', 'B', 'U', 'R', 'G']
 const selectedColors = ref([])
 
-const cards = ref([
-  {
-    id: 1,
-    name: 'Sol Ring',
-    type: 'Artifact',
-    cost: 1,
-    image: 'https://via.placeholder.com/300x180.png?text=Card+Art',
-    text: 'Add {C}{C}.',
-  },
-])
+// Deck and card data
+const currentDeck = ref(null)
+const deck = ref([])
+const searchResults = ref([])
+const isSearching = ref(false)
+const error = ref(null)
+const successMessage = ref(null)
 
-const filteredCards = computed(() => cards.value)
+// Load the current deck on mount
+onMounted(async () => {
+  await loadDecks()
+})
 
-function performSearch() {}
+async function loadDecks() {
+  try {
+    const response = await deckAPI.getAll()
+    if (response.success && response.decks.length > 0) {
+      // Load the first deck by default
+      await loadDeck(response.decks[0].id)
+    }
+  } catch (err) {
+    error.value = 'Failed to load decks: ' + err.message
+  }
+}
+
+async function loadDeck(deckId) {
+  try {
+    const response = await deckAPI.getById(deckId)
+    if (response.success) {
+      currentDeck.value = response.deck
+      deck.value = response.deck.cards || []
+    }
+  } catch (err) {
+    error.value = 'Failed to load deck: ' + err.message
+  }
+}
+
+async function performSearch() {
+  if (!searchQuery.value.trim()) {
+    searchResults.value = []
+    return
+  }
+
+  isSearching.value = true
+  error.value = null
+
+  try {
+    const response = await cardAPI.search(searchQuery.value)
+    if (response.success) {
+      searchResults.value = response.cards
+    }
+  } catch (err) {
+    error.value = 'Search failed: ' + err.message
+    searchResults.value = []
+  } finally {
+    isSearching.value = false
+  }
+}
+
 function toggleColor(color) {
   if (selectedColors.value.includes(color)) {
     selectedColors.value = selectedColors.value.filter(c => c !== color)
@@ -30,24 +76,74 @@ function toggleColor(color) {
   }
 }
 
-function filterType(type) {}
+const filteredCards = computed(() => {
+  if (!selectedColors.value.length) {
+    return searchResults.value
+  }
 
-const deck = ref([])
+  return searchResults.value.filter(card => {
+    if (!card.colors || card.colors.length === 0) {
+      return true // Colorless cards always match
+    }
+    return card.colors.some(color => selectedColors.value.includes(color))
+  })
+})
 
-function addToDeck(card) {
-  const existing = deck.value.find(e => e.card.id === card.id)
-  if (existing) existing.qty++
-  else deck.value.push({ card, qty: 1 })
+async function addToDeck(card) {
+  if (!currentDeck.value) {
+    error.value = 'Please create or select a deck first'
+    return
+  }
+
+  try {
+    const response = await deckAPI.addCard(currentDeck.value.id, card.name, 1)
+    if (response.success) {
+      // Reload the deck to get updated card list
+      await loadDeck(currentDeck.value.id)
+      successMessage.value = `Added ${card.name} to deck`
+      setTimeout(() => successMessage.value = null, 3000)
+    }
+  } catch (err) {
+    error.value = 'Failed to add card: ' + err.message
+  }
 }
 
-function clearDeck() {
-  deck.value = []
+async function updateQuantity(card, newQuantity) {
+  try {
+    await deckAPI.updateCardQuantity(currentDeck.value.id, card.id, newQuantity)
+    await loadDeck(currentDeck.value.id)
+  } catch (err) {
+    error.value = 'Failed to update quantity: ' + err.message
+  }
 }
 
-const deckCount = computed(() => deck.value.reduce((sum, e) => sum + e.qty, 0))
+async function removeFromDeck(card) {
+  try {
+    await deckAPI.removeCard(currentDeck.value.id, card.id)
+    await loadDeck(currentDeck.value.id)
+    successMessage.value = `Removed ${card.card_name} from deck`
+    setTimeout(() => successMessage.value = null, 3000)
+  } catch (err) {
+    error.value = 'Failed to remove card: ' + err.message
+  }
+}
 
-const modalOpen = ref(false)
-const modalCard = ref({})
+async function clearDeck() {
+  if (!confirm('Are you sure you want to remove all cards from this deck?')) {
+    return
+  }
+
+  try {
+    for (const card of deck.value) {
+      await deckAPI.removeCard(currentDeck.value.id, card.id)
+    }
+    await loadDeck(currentDeck.value.id)
+  } catch (err) {
+    error.value = 'Failed to clear deck: ' + err.message
+  }
+}
+
+const deckCount = computed(() => deck.value.reduce((sum, e) => sum + e.quantity, 0))
 </script>
 
 <template>
@@ -62,17 +158,26 @@ const modalCard = ref({})
       </div>
 
       <div class="header-actions">
-        <button class="icon-btn" title="Import">⤓</button>
-        <button class="icon-btn" title="Export">⤒</button>
-        <button class="btn">Save Deck</button>
+        <button class="btn" @click="loadDecks">Refresh</button>
       </div>
     </header>
+
+    <!-- Error/Success Messages -->
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
 
     <div class="main-grid">
       <aside class="sidebar">
         <div class="search">
-          <input v-model="searchQuery" type="search" placeholder="Search cards by name, text, type..." />
-          <button class="btn small" @click="performSearch">Search</button>
+          <input 
+            v-model="searchQuery" 
+            type="search" 
+            placeholder="Search cards by name..."
+            @keyup.enter="performSearch"
+          />
+          <button class="btn small" @click="performSearch" :disabled="isSearching">
+            {{ isSearching ? 'Searching...' : 'Search' }}
+          </button>
         </div>
 
         <div class="filter-row">
@@ -109,33 +214,47 @@ const modalCard = ref({})
       <main class="content">
         <div class="toolbar">
           <div class="row">
-            <button class="btn" @click="filterType('all')">All Cards</button>
-            <button class="btn ghost" @click="filterType('creature')">Creatures</button>
-            <button class="btn ghost" @click="filterType('spell')">Spells</button>
+            <h3>Search Results</h3>
           </div>
-          <div style="margin-left:auto;" class="small">Showing <strong>{{ filteredCards.length }}</strong> results</div>
+          <div style="margin-left:auto;" class="small">
+            Showing <strong>{{ filteredCards.length }}</strong> results
+          </div>
         </div>
 
         <section class="card-grid">
           <div
             v-for="card in filteredCards"
-            :key="card.id"
+            :key="card.scryfallId"
             class="mtg-card"
             role="button"
             tabindex="0"
             @click="addToDeck(card)"
             :title="'Add ' + card.name + ' to deck'"
           >
-            <img class="mtg-thumb" :src="card.image" :alt="card.name + ' art'" />
+            <img 
+              v-if="card.image" 
+              class="mtg-thumb" 
+              :src="card.image" 
+              :alt="card.name + ' art'" 
+            />
+            <div v-else class="mtg-thumb placeholder">No Image</div>
             <div class="meta">
               <div>
                 <h4>{{ card.name }}</h4>
                 <p class="small">{{ card.type }}</p>
               </div>
               <div class="mana">
-                <span class="symbol">{{ card.cost }}</span>
+                <span class="symbol">{{ card.manaCost || '—' }}</span>
               </div>
             </div>
+          </div>
+
+          <div v-if="filteredCards.length === 0 && searchQuery" class="empty-state">
+            <p>No cards found. Try a different search.</p>
+          </div>
+
+          <div v-if="filteredCards.length === 0 && !searchQuery" class="empty-state">
+            <p>Search for cards to add to your deck</p>
           </div>
         </section>
       </main>
@@ -143,7 +262,7 @@ const modalCard = ref({})
       <aside class="deck-panel">
         <div class="deck-title">
           <div>
-            <h3>Current Deck</h3>
+            <h3>{{ currentDeck?.name || 'Current Deck' }}</h3>
             <div class="small deck-stats">{{ deckCount }} cards</div>
           </div>
           <div>
@@ -151,13 +270,19 @@ const modalCard = ref({})
           </div>
         </div>
 
-        <div class="drop-zone">Drop cards here or click a card to add</div>
-
         <div class="deck-list">
-          <div class="deck-row" v-for="(entry, index) in deck" :key="index">
-            <div class="qty">{{ entry.qty }}</div>
-            <div class="name">{{ entry.card.name }}</div>
-            <div class="kv small">{{ entry.card.type }}</div>
+          <div class="deck-row" v-for="card in deck" :key="card.id">
+            <div class="qty-controls">
+              <button @click="updateQuantity(card, card.quantity - 1)" class="qty-btn">−</button>
+              <div class="qty">{{ card.quantity }}</div>
+              <button @click="updateQuantity(card, card.quantity + 1)" class="qty-btn">+</button>
+            </div>
+            <div class="name">{{ card.card_name }}</div>
+            <button @click="removeFromDeck(card)" class="btn-remove" title="Remove card">×</button>
+          </div>
+
+          <div v-if="deck.length === 0" class="empty-state">
+            <p>No cards in deck. Click cards from search results to add them.</p>
           </div>
         </div>
       </aside>
@@ -165,16 +290,84 @@ const modalCard = ref({})
 
     <footer class="footer">Built with love for MTG deck building.</footer>
   </div>
-
-  <div class="modal-backdrop" v-if="modalOpen">
-    <div class="modal" role="dialog" aria-modal="true">
-      <h2>{{ modalCard.name }}</h2>
-      <p class="small">{{ modalCard.text }}</p>
-      <button class="btn" @click="modalOpen = false">Close</button>
-    </div>
-  </div>
 </template>
 
 <style scoped>
-/* You can paste your styles.css content here or import it */
+.alert {
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 8px;
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.alert-success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--glass);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.qty-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-remove {
+  background: transparent;
+  border: 1px solid var(--glass);
+  color: var(--danger);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-remove:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.placeholder {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
 </style>
