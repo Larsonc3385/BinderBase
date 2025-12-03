@@ -2,8 +2,6 @@
 
 A modern, feature-rich Magic: The Gathering deck builder with an intuitive interface and powerful card management tools.
 
-![BinderBase Logo](https://via.placeholder.com/150x150?text=BB)
-
 ## Features
 
 ### 🎴 Deck Management
@@ -238,13 +236,6 @@ cd frontend
 npm run dev  # Run with Vite HMR
 ```
 
-### Building for Production
-
-```bash
-cd frontend
-npm run build  # Creates optimized production build
-```
-
 ## Configuration
 
 ### Environment Variables
@@ -352,26 +343,7 @@ Alternatively, use the Supabase Table Editor to create tables visually.
 - Check CORS settings in server.js
 - Inspect network tab in browser DevTools
 
-## Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Style
-- Use ES6+ syntax
-- Follow Vue 3 Composition API patterns
-- Use meaningful variable names
-- Add comments for complex logic
-
-## Future Enhancements
-
 ### Planned Features
-- [ ] Support for multiple formats (Standard, Modern, etc.)
 - [ ] Deck import/export (text, MTGO, Arena)
 - [ ] Price tracking integration
 - [ ] Deck statistics and analysis
@@ -382,6 +354,7 @@ Contributions are welcome! Please follow these guidelines:
 - [ ] Dark/light theme toggle
 - [ ] Card collection management
 - [ ] Advanced filtering (by type, CMC, rarity, etc.)
+- [ ] Ban-list integration/toggle to allow banned cards in library
 
 ### UI Improvements
 - [ ] Fix commander name wrapping
@@ -389,10 +362,6 @@ Contributions are welcome! Please follow these guidelines:
 - [ ] Improve error messages
 - [ ] Add keyboard shortcuts
 - [ ] Implement drag-and-drop card organization
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 
@@ -408,6 +377,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Built with ❤️ for MTG deck building**
+**Built to enhance the deck-building experience for the commander format of MTG!**
 
 *Wizards of the Coast, Magic: The Gathering, and their logos are trademarks of Wizards of the Coast LLC. BinderBase is not affiliated with or endorsed by Wizards of the Coast.*
