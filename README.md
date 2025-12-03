@@ -32,13 +32,6 @@ A modern, feature-rich Magic: The Gathering deck builder with an intuitive inter
 - View inclusion rates and synergy scores
 - One-click card addition from recommendations
 
-### 🎨 Modern Gaming Interface
-- Dark space theme with magical accents
-- Smooth animations and transitions
-- Responsive card grid layout
-- Interactive hover effects
-- Professional typography using Orbitron and Space Mono fonts
-
 ### ⚡ Commander Format Support
 - Enforce commander color identity rules
 - Automatic color filtering when commander is set
