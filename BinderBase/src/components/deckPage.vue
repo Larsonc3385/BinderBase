@@ -877,6 +877,6 @@ function handleCommanderLeave() {
       <img :src="hoveredCommander.image" :alt="hoveredCommander.name" />
     </div>
 
-    <footer class="footer">Built with love for MTG deck building.</footer>
+    <footer class="footer">Built to enhance the experience of deck-building for the commander format of MTG!</footer>
   </div>
 </template>
