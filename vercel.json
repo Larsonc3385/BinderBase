@@ -1,26 +1,5 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "backend/src/index.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "BinderBase/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "BinderBase/dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/backend/src/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/BinderBase/$1"
-    }
-  ]
+  "buildCommand": "cd BinderBase && npm install && npm run build",
+  "outputDirectory": "BinderBase/dist",
+  "installCommand": "npm install --prefix BinderBase && npm install --prefix backend"
 }

@@ -20,7 +20,7 @@ app.use(Express.json())
 
 // CORS middleware
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:5173')
+    res.header('Access-Control-Allow-Origin', '*') // Allow all origins in production
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
@@ -68,7 +68,12 @@ app.use((req, res) => {
     res.status(404).json({ success: false, error: 'Endpoint not found' })
 })
 
-// Listen
-app.listen(LISTEN_PORT, () => {
-    console.log(`Server listening on http://127.0.0.1:${LISTEN_PORT}`)
-})
+// Only listen if not in serverless environment
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(LISTEN_PORT, () => {
+        console.log(`Server listening on http://127.0.0.1:${LISTEN_PORT}`)
+    })
+}
+
+// Export for Vercel serverless functions
+export default app
