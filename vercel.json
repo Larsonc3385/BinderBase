@@ -1,5 +1,0 @@
-{
-  "buildCommand": "cd BinderBase && npm install && npm run build",
-  "outputDirectory": "BinderBase/dist",
-  "installCommand": "npm install --prefix BinderBase && npm install --prefix backend"
-}
