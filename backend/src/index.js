@@ -1,7 +1,6 @@
 import Express from 'express'
 import dotenv from 'dotenv'
 import morgan from 'morgan'
-import cors from 'cors'
 
 // Import routers
 import deckRoutes from './routes/deck.js'
