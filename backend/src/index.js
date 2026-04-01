@@ -1,16 +1,24 @@
 import Express from 'express'
 import dotenv from 'dotenv'
 import morgan from 'morgan'
+import cors from 'cors'
 
 // Import routers
 import deckRoutes from './routes/deck.js'
 
 // Configure environment variables
 dotenv.config()
-const PORT = process.env.LISTEN_PORT || 3000
+const PORT = process.env.PORT || 3000
 
 // Creates the express server app
 const app = new Express()
+
+//Connect backend to frontend
+import cors from 'cors'
+
+app.use(cors({
+  origin: 'https://binder-base.vercel.app/'
+}))
 
 // Attach universal app filters
 app.use(morgan('dev'))
