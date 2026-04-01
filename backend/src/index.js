@@ -7,7 +7,7 @@ import deckRoutes from './routes/deck.js'
 
 // Configure environment variables
 dotenv.config()
-const LISTEN_PORT = process.env.LISTEN_PORT ?? 3000
+const PORT = process.env.LISTEN_PORT || 3000
 
 // Creates the express server app
 const app = new Express()
@@ -70,8 +70,8 @@ app.use((req, res) => {
 
 // Only listen if not in serverless environment
 if (process.env.NODE_ENV !== 'production') {
-    app.listen(LISTEN_PORT, () => {
-        console.log(`Server listening on http://127.0.0.1:${LISTEN_PORT}`)
+    app.listen(PORT, () => {
+        console.log(`Server listening on http://127.0.0.1:${PORT}`)
     })
 }
 
