@@ -32,8 +32,11 @@ export const MIN_RESULTS = 1;
 export const MAX_RESULTS = 100;
 
 export async function keepDBOnline(){
+  const id = 1;
   const {data, error } = await DBClient
   .from('keepDBOnline')
   .select('*')
+  .eq('id', id)
+  .single()
   return data;
 }
