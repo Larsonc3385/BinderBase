@@ -354,11 +354,4 @@ router.delete('/decks/:deckId', async (req, res) => {
   }
 });
 
-router.get('keepDBOnline', async (req,res) =>{
-  const {data, error } = await DBClient
-  .from('keepDBOnline')
-  .select('*')
-  return data;
-})
-
 export default router;

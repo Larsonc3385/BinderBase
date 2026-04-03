@@ -4,11 +4,14 @@ import dotenv from 'dotenv'
 import morgan from 'morgan'
 
 import deckRoutes from './routes/deck.js'
+import micRoutes from './routes/mic.js'
 
 dotenv.config()
 const PORT = process.env.PORT || 3000
 
 const app = new Express()
+
+app.use('/mic', micRoutes);
 
 app.use(cors({
   origin: 'https://binder-base.vercel.app'  // removed trailing slash

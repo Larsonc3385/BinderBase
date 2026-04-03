@@ -30,3 +30,10 @@ console.log('Supabase client initialized successfully');
 // Maximum number of results allowed to return
 export const MIN_RESULTS = 1;
 export const MAX_RESULTS = 100;
+
+export async function keepDBOnline(){
+  const {data, error } = await DBClient
+  .from('keepDBOnline')
+  .select('*')
+  return data;
+}
