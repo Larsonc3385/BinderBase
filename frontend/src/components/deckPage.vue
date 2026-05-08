@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { deckAPI, cardAPI, recommendationsAPI } from '../services/api.js'
 
+const currentUser = localStorage.getItem('username');
+
 const searchQuery = ref('')
 const selectedFormat = ref('Commander')
 
@@ -56,8 +58,8 @@ async function loadDecks() {
 
 async function selectDeck(deckItem) {
   try {
-    console.log('Selecting deck:', deckItem.name, 'ID:', deckItem.id)
-    const response = await deckAPI.getById(deckItem.id)
+    console.log('Selecting deck:', deckItem.name, 'ID:', deckItem.id, 'BuiltBy: ', currentUser)
+    const response = await deckAPI.getById(deckItem.id, currentUser)
     console.log('Deck response:', response)
     
     if (response.success) {

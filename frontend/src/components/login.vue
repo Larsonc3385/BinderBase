@@ -45,17 +45,13 @@ async function NavigatorLogin() {
 
 async function NewUser() {
   error.value = null
-  if (!signupUser.value.trim() || !signupEmail.value.trim() || !signupPass.value) {
+  if (!signupUser.value.trim() ||!signupPass.value) {
     error.value = 'Please fill in all fields.'
     return
   }
 
   try {
-    const result = await userAPI.create(
-      signupUser.value.trim(),
-      signupEmail.value.trim(),
-      signupPass.value
-    )
+    const result = await userAPI.create(signupUser.value.trim(), signupPass.value)
 
     if (result.error) {
       error.value = result.message || 'Account creation failed.'
@@ -131,15 +127,6 @@ async function NewUser() {
               type="text"
               placeholder="Choose a username"
               autocomplete="username"
-            />
-          </div>
-          <div class="bb-field">
-            <label class="bb-label">Recovery email</label>
-            <input
-              v-model="signupEmail"
-              type="email"
-              placeholder="your@email.com"
-              autocomplete="email"
             />
           </div>
           <div class="bb-field">
