@@ -40,3 +40,15 @@ export async function keepDBOnline(){
   .single()
   return data;
 }
+
+export async function createUser(username, password) {
+  const hashed = await bcrypt.hash(password, 10);
+  const userId = crypto.randomUUID();
+
+  const { data, error } = await DBClient
+    .from('User')
+    .insert([{ userid: userId, username, password: hashed}]);
+
+  if (error) throw error;
+  return { userId};
+}

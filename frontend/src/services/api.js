@@ -11,7 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL
 /**
  * Generic fetch wrapper with error handling
  */
-async function apiFetch(endpoint, options = {}) {
+export async function apiFetch(endpoint, options = {}) {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
