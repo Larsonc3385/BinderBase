@@ -80,7 +80,7 @@ async function NewUser() {
       </div>
 
       <div class="bb-body">
-        <div v-if="error" class="bb-alert">{{ error }}</div>
+        <div v-if="error" class="alert alert-error">{{ error }}</div>
 
         <div class="bb-tabs">
           <button
@@ -105,7 +105,6 @@ async function NewUser() {
             <label class="bb-label">Username</label>
             <input
               v-model="loginUser"
-              class="bb-input"
               type="text"
               placeholder="Your username"
               autocomplete="username"
@@ -115,13 +114,12 @@ async function NewUser() {
             <label class="bb-label">Password</label>
             <input
               v-model="loginPass"
-              class="bb-input"
               type="password"
               placeholder="••••••••"
               autocomplete="current-password"
             />
           </div>
-          <button class="bb-btn-primary" type="submit">Enter the Ledger</button>
+          <button class="bb-btn-primary" type="submit">Login</button>
         </form>
 
         <!-- Register -->
@@ -130,7 +128,6 @@ async function NewUser() {
             <label class="bb-label">Username</label>
             <input
               v-model="signupUser"
-              class="bb-input"
               type="text"
               placeholder="Choose a username"
               autocomplete="username"
@@ -140,7 +137,6 @@ async function NewUser() {
             <label class="bb-label">Recovery email</label>
             <input
               v-model="signupEmail"
-              class="bb-input"
               type="email"
               placeholder="your@email.com"
               autocomplete="email"
@@ -150,13 +146,12 @@ async function NewUser() {
             <label class="bb-label">Password</label>
             <input
               v-model="signupPass"
-              class="bb-input"
               type="password"
               placeholder="••••••••"
               autocomplete="new-password"
             />
           </div>
-          <button class="bb-btn-primary" type="submit">Inscribe Your Name</button>
+          <button class="bb-btn-primary" type="submit">Sign Up</button>
         </form>
       </div>
     </div>
@@ -164,8 +159,6 @@ async function NewUser() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap');
-
 .bb-wrap {
   min-height: 100vh;
   display: flex;
@@ -177,55 +170,62 @@ async function NewUser() {
 .bb-card {
   width: 100%;
   max-width: 380px;
-  background: var(--card-surface);
-  border: 1px solid rgba(139, 92, 246, 0.15);
+  background: var(--surface);
+  border: var(--border-gold);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(139,105,20,0.1);
+  position: relative;
+}
+
+.bb-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
 .bb-header {
   padding: 2rem 2rem 1.5rem;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+  border-bottom: var(--border-mid);
   text-align: center;
 }
 
 .bb-logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--magic-blue), var(--magic-purple));
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius);
+  border: var(--border-gold);
+  background: var(--void);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-  font-family: 'Cinzel', serif;
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold-bright);
+  box-shadow: var(--shadow-sm), inset 0 0 12px rgba(139,105,20,0.1);
   letter-spacing: 0.02em;
 }
 
 .bb-title {
-  font-family: 'Cinzel', serif;
-  font-size: 22px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+  letter-spacing: 0.04em;
   margin: 0 0 4px;
-  letter-spacing: 0.03em;
-  background: linear-gradient(135deg, var(--magic-cyan), var(--magic-blue));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .bb-subtitle {
-  font-family: 'Crimson Pro', serif;
-  font-size: 15px;
-  font-weight: 300;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
   font-style: italic;
-  color: var(--text-secondary);
+  font-weight: 300;
+  color: var(--text-muted);
   margin: 0;
-  line-height: 1.5;
 }
 
 .bb-body {
@@ -234,8 +234,8 @@ async function NewUser() {
 
 .bb-tabs {
   display: flex;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: var(--radius);
+  border: var(--border-mid);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   margin-bottom: 1.5rem;
 }
@@ -245,17 +245,18 @@ async function NewUser() {
   padding: 8px 0;
   border: none;
   background: transparent;
-  font-family: 'Cinzel', serif;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  text-transform: uppercase;
 }
 
 .bb-tab.active {
-  background: linear-gradient(135deg, var(--magic-blue), var(--magic-purple));
-  color: white;
+  background: var(--gold-mid);
+  color: var(--gold-light);
 }
 
 .bb-field {
@@ -264,70 +265,33 @@ async function NewUser() {
 
 .bb-label {
   display: block;
-  font-family: 'Cinzel', serif;
-  font-size: 11px;
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
   letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin-bottom: 6px;
   text-transform: uppercase;
 }
 
-.bb-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 2px solid rgba(59, 130, 246, 0.2);
-  border-radius: var(--radius);
-  background: var(--elevated);
-  color: var(--text-primary);
-  font-family: 'Crimson Pro', serif;
-  font-size: 15px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.bb-input:focus {
-  border-color: var(--magic-blue);
-  box-shadow: var(--glow-blue);
-}
-
-.bb-input::placeholder {
-  color: var(--text-muted);
-}
-
 .bb-btn-primary {
   width: 100%;
-  padding: 11px 0;
+  padding: 0.6rem 0;
   margin-top: 0.25rem;
-  border: none;
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--magic-blue), var(--magic-purple));
-  color: white;
-  font-family: 'Cinzel', serif;
-  font-size: 13px;
+  border: var(--border-gold);
+  border-radius: var(--radius-sm);
+  background: var(--gold-mid);
+  color: var(--gold-light);
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
   letter-spacing: 0.1em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s;
-  box-shadow: var(--shadow-md);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .bb-btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.bb-btn-primary:active {
-  transform: translateY(0);
-}
-
-.bb-alert {
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  font-family: 'Crimson Pro', serif;
-  font-size: 14px;
-  margin-bottom: 1rem;
-  border: 1px solid var(--danger);
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
+  background: var(--gold);
+  border-color: var(--gold-bright);
+  color: var(--void);
 }
 </style>

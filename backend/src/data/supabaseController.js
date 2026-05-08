@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { nanoid } from 'nanoid'
+import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 // Read environment variables
 dotenv.config();
@@ -47,7 +50,7 @@ export async function createUser(username, password) {
 
   const { data, error } = await DBClient
     .from('User')
-    .insert([{ userid: userId, username, password: hashed}]);
+    .insert([{ id: userId, username, password: hashed}]);
 
   if (error) throw error;
   return { userId};

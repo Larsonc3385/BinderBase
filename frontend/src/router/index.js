@@ -3,14 +3,14 @@ import deckPage from '../components/deckPage.vue'
 import loginPage from '../components/login.vue'
 
 const routes = [
-{ path: '/', redirect: '/deckPage'},
-{ path: '/deckPage', name: deckPage, component: deckPage },
-{ path: '/login', name: loginPage, component: loginPage}
+  { path: '/',         redirect: '/login' },
+  { path: '/login',    name: 'Login',    component: loginPage },
+  { path: '/deckPage', name: 'DeckPage', component: deckPage },
 ]
 
 const router = createRouter({
-    history: createWebHistory(),
-    routes,
+  history: createWebHistory(),
+  routes,
 })
 
 export default router

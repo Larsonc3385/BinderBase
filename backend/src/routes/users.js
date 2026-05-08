@@ -1,6 +1,9 @@
 import Express from 'express';
 import {DBClient, keepDBOnline, createUser} from '../data/supabaseController.js';
 import dotenv from 'dotenv';
+import { nanoid } from 'nanoid'
+import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 dotenv.config();
 
@@ -19,7 +22,7 @@ router.post('/login', async (req, res) => {
     if (error || !user)
       return res.status(401).json({ valid: false, message: 'User not found' });
 
-    const match = await bcrypt.compare(password, user.userpassword);
+    const match = await bcrypt.compare(password, user.password);
     if (!match)
       return res.status(401).json({ valid: false, message: 'Invalid password' });
 
