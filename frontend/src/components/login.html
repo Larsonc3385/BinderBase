@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BinderBase — Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Cinzel Decorative"', 'serif'],
+            heading: ['"Cinzel"', 'serif'],
+            body: ['"Crimson Pro"', 'serif'],
+          },
+          colors: {
+            void:          '#100b02',
+            surface:       '#1f1608',
+            elevated:      '#261c0a',
+            sunken:        '#120d04',
+            'gold-dim':    '#3d2e0e',
+            'gold-mid':    '#6b4f1a',
+            gold:          '#8b6914',
+            'gold-bright': '#c9963a',
+            'gold-light':  '#f0d48a',
+            'text-primary':   '#e8d5a3',
+            'text-secondary': '#a08850',
+            'text-muted':     '#5a4a28',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { background-color: #100b02; }
+    .shimmer-top::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 15%; right: 15%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #8b6914, transparent);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6 font-body text-[#e8d5a3]"
+      style="background-image: radial-gradient(ellipse at 20% 0%, rgba(139,105,20,0.07) 0%, transparent 55%), radial-gradient(ellipse at 80% 100%, rgba(100,70,10,0.06) 0%, transparent 55%);">
+
+  <div class="w-full max-w-sm bg-[#1f1608] border border-[#8b6914] rounded-lg shadow-2xl overflow-hidden relative shimmer-top">
+
+    <!-- Header -->
+    <div class="px-8 pt-8 pb-6 border-b border-[#3d2e0e] text-center">
+      <div class="w-13 h-13 mx-auto mb-4 rounded border border-[#8b6914] bg-[#100b02]
+                  flex items-center justify-center font-display text-sm font-bold text-[#c9963a]"
+           style="width:52px;height:52px;box-shadow:inset 0 0 12px rgba(139,105,20,0.1)">
+        BB
+      </div>
+      <h1 class="font-display text-2xl font-bold text-[#c9963a] tracking-wider mb-1">BinderBase</h1>
+      <p class="font-body text-sm italic text-[#5a4a28]">Enter, if you dare.</p>
+    </div>
+
+    <!-- Body -->
+    <div class="px-8 py-7">
+
+      <!-- Error banner -->
+      <div id="error-banner" class="hidden mb-4 px-3 py-2 rounded border border-red-800/50
+                                    bg-red-950/30 text-red-400 font-body text-sm"></div>
+
+      <!-- Tabs -->
+      <div class="flex border border-[#3d2e0e] rounded overflow-hidden mb-6">
+        <button id="tab-login" onclick="switchTab('login')"
+                class="flex-1 py-2 font-heading text-xs uppercase tracking-widest transition-all duration-150
+                       bg-[#6b4f1a] text-[#f0d48a]">
+          Sign In
+        </button>
+        <button id="tab-signup" onclick="switchTab('signup')"
+                class="flex-1 py-2 font-heading text-xs uppercase tracking-widest transition-all duration-150
+                       bg-transparent text-[#5a4a28] hover:text-[#c9963a]">
+          Register
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block font-heading text-xs font-semibold text-[#5a4a28] uppercase tracking-widest mb-1">
+            Username
+          </label>
+          <input id="login-user" type="text" placeholder="Your username" autocomplete="username"
+                 class="w-full px-3 py-2 rounded border border-[#3d2e0e] bg-[#120d04] text-[#e8d5a3]
+                        font-body text-base outline-none placeholder-[#5a4a28]
+                        focus:border-[#6b4f1a] focus:ring-1 focus:ring-[#6b4f1a]/30 transition-all" />
+        </div>
+        <div>
+          <label class="block font-heading text-xs font-semibold text-[#5a4a28] uppercase tracking-widest mb-1">
+            Password
+          </label>
+          <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+                 class="w-full px-3 py-2 rounded border border-[#3d2e0e] bg-[#120d04] text-[#e8d5a3]
+                        font-body text-base outline-none placeholder-[#5a4a28]
+                        focus:border-[#6b4f1a] focus:ring-1 focus:ring-[#6b4f1a]/30 transition-all" />
+        </div>
+        <button type="submit" id="login-btn"
+                class="w-full py-2 mt-1 rounded border border-[#8b6914] bg-[#6b4f1a] text-[#f0d48a]
+                       font-heading text-xs uppercase tracking-widest cursor-pointer
+                       hover:bg-[#8b6914] hover:text-[#100b02] transition-all duration-150
+                       disabled:opacity-40 disabled:cursor-not-allowed">
+          Login
+        </button>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="form-signup" onsubmit="handleSignup(event)" class="space-y-4 hidden">
+        <div>
+          <label class="block font-heading text-xs font-semibold text-[#5a4a28] uppercase tracking-widest mb-1">
+            Username
+          </label>
+          <input id="signup-user" type="text" placeholder="Choose a username" autocomplete="username"
+                 class="w-full px-3 py-2 rounded border border-[#3d2e0e] bg-[#120d04] text-[#e8d5a3]
+                        font-body text-base outline-none placeholder-[#5a4a28]
+                        focus:border-[#6b4f1a] focus:ring-1 focus:ring-[#6b4f1a]/30 transition-all" />
+        </div>
+        <div>
+          <label class="block font-heading text-xs font-semibold text-[#5a4a28] uppercase tracking-widest mb-1">
+            Password
+          </label>
+          <input id="signup-pass" type="password" placeholder="••••••••" autocomplete="new-password"
+                 class="w-full px-3 py-2 rounded border border-[#3d2e0e] bg-[#120d04] text-[#e8d5a3]
+                        font-body text-base outline-none placeholder-[#5a4a28]
+                        focus:border-[#6b4f1a] focus:ring-1 focus:ring-[#6b4f1a]/30 transition-all" />
+        </div>
+        <button type="submit" id="signup-btn"
+                class="w-full py-2 mt-1 rounded border border-[#8b6914] bg-[#6b4f1a] text-[#f0d48a]
+                       font-heading text-xs uppercase tracking-widest cursor-pointer
+                       hover:bg-[#8b6914] hover:text-[#100b02] transition-all duration-150
+                       disabled:opacity-40 disabled:cursor-not-allowed">
+          Sign Up
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:3001'
+
+    // ── Redirect if already logged in ──────────────────────────────────────────
+    if (localStorage.getItem('username')) {
+      window.location.href = 'deck.html'
+    }
+
+    // ── Tab switching ──────────────────────────────────────────────────────────
+    function switchTab(tab) {
+      const isLogin = tab === 'login'
+      document.getElementById('form-login').classList.toggle('hidden', !isLogin)
+      document.getElementById('form-signup').classList.toggle('hidden', isLogin)
+
+      const activeClasses = ['bg-[#6b4f1a]', 'text-[#f0d48a]']
+      const inactiveClasses = ['bg-transparent', 'text-[#5a4a28]']
+
+      const loginBtn  = document.getElementById('tab-login')
+      const signupBtn = document.getElementById('tab-signup')
+
+      if (isLogin) {
+        loginBtn.classList.add(...activeClasses)
+        loginBtn.classList.remove(...inactiveClasses)
+        signupBtn.classList.remove(...activeClasses)
+        signupBtn.classList.add(...inactiveClasses)
+      } else {
+        signupBtn.classList.add(...activeClasses)
+        signupBtn.classList.remove(...inactiveClasses)
+        loginBtn.classList.remove(...activeClasses)
+        loginBtn.classList.add(...inactiveClasses)
+      }
+
+      showError(null)
+    }
+
+    // ── Error display ──────────────────────────────────────────────────────────
+    function showError(msg) {
+      const el = document.getElementById('error-banner')
+      if (msg) {
+        el.textContent = msg
+        el.classList.remove('hidden')
+      } else {
+        el.classList.add('hidden')
+      }
+    }
+
+    // ── Login ──────────────────────────────────────────────────────────────────
+    async function handleLogin(e) {
+      e.preventDefault()
+      showError(null)
+      const username = document.getElementById('login-user').value.trim()
+      const password = document.getElementById('login-pass').value
+      if (!username || !password) return showError('Please fill in all fields.')
+
+      const btn = document.getElementById('login-btn')
+      btn.disabled = true
+      btn.textContent = 'Signing in…'
+
+      try {
+        const res = await fetch(`${API}/users/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        })
+        const data = await res.json()
+        if (!data.valid) throw new Error(data.message || 'Invalid credentials.')
+        localStorage.setItem('username', data.user.username)
+        localStorage.setItem('userid', data.user.id)
+        window.location.href = 'deck.html'
+      } catch (err) {
+        showError(err.message)
+        btn.disabled = false
+        btn.textContent = 'Login'
+      }
+    }
+
+    // ── Signup ─────────────────────────────────────────────────────────────────
+    async function handleSignup(e) {
+      e.preventDefault()
+      showError(null)
+      const username = document.getElementById('signup-user').value.trim()
+      const password = document.getElementById('signup-pass').value
+      if (!username || !password) return showError('Please fill in all fields.')
+
+      const btn = document.getElementById('signup-btn')
+      btn.disabled = true
+      btn.textContent = 'Creating account…'
+
+      try {
+        const res = await fetch(`${API}/users/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        })
+        const data = await res.json()
+        if (data.error) throw new Error(data.message || 'Signup failed.')
+        switchTab('login')
+        document.getElementById('login-user').value = username
+      } catch (err) {
+        showError(err.message)
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Sign Up'
+      }
+    }
+  </script>
+</body>
+</html>
