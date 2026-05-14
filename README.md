@@ -95,9 +95,9 @@ Copy `backend/.env.example` to `backend/.env`:
 
 | Variable | Example Value | Description |
 |---|---|---|
-| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGODB_URI` | `YOUR_MONGODB_URI` | MongoDB connection string |
 | `MONGODB_DB_NAME` | `Binderbase` | Name of the database (case sensitive) |
-| `PORT` | `4000` | Port the Express server listens on |
+| `PORT` | `YOUR_PORT` | Port the Express server listens on |
 
 > **Note:** The database name is case sensitive. Whatever you set here must match what was used when seeding. The default is `Binderbase` with a capital B.
 
