@@ -11,118 +11,88 @@ import RecommendationsModal from "../components/RecommendationsModal";
 
 const API = "http://localhost:4000";
 
+// ai
 export default function DeckPage() {
-  const router = useRouter();
-  const username =
-    typeof window !== "undefined" ? localStorage.getItem("username") : null;
+  const router   = useRouter();
+  const username = typeof window !== "undefined" ? localStorage.getItem("username") : null;
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  const [allDecks, setAllDecks]             = useState([]);
-  const [currentDeck, setCurrentDeck]       = useState(null);
-  const [deckCards, setDeckCards]           = useState([]);
-  const [searchQuery, setSearchQuery]       = useState("");
-  const [searchResults, setSearchResults]   = useState([]);
-  const [isSearching, setIsSearching]       = useState(false);
-  const [selectedColors, setSelectedColors] = useState([]);
+  const [allDecks, setAllDecks]               = useState([]);
+  const [currentDeck, setCurrentDeck]         = useState(null);
+  const [deckCards, setDeckCards]             = useState([]);
+  const [searchQuery, setSearchQuery]         = useState("");
+  const [searchResults, setSearchResults]     = useState([]);
+  const [isSearching, setIsSearching]         = useState(false);
+  const [selectedColors, setSelectedColors]   = useState([]);
   const [commanderColors, setCommanderColors] = useState([]);
-  const [hoveredCard, setHoveredCard]       = useState(null);
-  const [error, setError]                   = useState(null);
-  const [success, setSuccess]               = useState(null);
+  const [hoveredCard, setHoveredCard]         = useState(null);
+  const [flash, setFlash]                     = useState(null);
   const [showNewDeckInput, setShowNewDeckInput] = useState(false);
-  const [newDeckName, setNewDeckName]       = useState("");
+  const [newDeckName, setNewDeckName]         = useState("");
 
-  // Modals
   const [showDeckSelector, setShowDeckSelector]   = useState(false);
   const [showCommander, setShowCommander]         = useState(false);
   const [showRecs, setShowRecs]                   = useState(false);
   const [recommendations, setRecommendations]     = useState(null);
   const [isLoadingRecs, setIsLoadingRecs]         = useState(false);
 
-  // ── Auth guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!localStorage.getItem("username")) router.push("/login");
   }, [router]);
 
-  // ── Load decks on mount ────────────────────────────────────────────────────
-  useEffect(() => {
-    loadDecks();
-  }, []);
+  useEffect(() => { loadDecks(); }, []);
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  function flash(msg, type = "success") {
-    if (type === "success") setSuccess(msg);
-    else setError(msg);
-    setTimeout(() => { setSuccess(null); setError(null); }, 3000);
+  function showFlash(msg, type = "success") {
+    setFlash({ msg, type });
+    setTimeout(() => setFlash(null), 3000);
   }
 
-  // ── Decks ──────────────────────────────────────────────────────────────────
+  // ai
   async function loadDecks() {
     try {
-      const res = await fetch(
-        `${API}/api/decks?username=${encodeURIComponent(username || "")}`
-      );
+      const res  = await fetch(`${API}/api/decks?username=${encodeURIComponent(username || "")}`);
       const data = await res.json();
       setAllDecks(data.decks || []);
-      if (data.decks?.length > 0 && !currentDeck) {
-        await selectDeck(data.decks[0]);
-      }
+      if (data.decks?.length > 0 && !currentDeck) await selectDeck(data.decks[0]);
       return data.decks || [];
-    } catch (err) {
-      flash(err.message, "error");
-      return [];
-    }
+    } catch (err) { showFlash(err.message, "danger"); return []; }
   }
 
   async function selectDeck(deckItem) {
     try {
-      const res = await fetch(`${API}/api/decks/${deckItem._id}`);
+      const res  = await fetch(`${API}/api/decks/${deckItem._id}`);
       const data = await res.json();
       setCurrentDeck(data.deck);
       setDeckCards(data.deck.cards || []);
       setShowDeckSelector(false);
-
-      if (data.deck.commander) {
-        await loadCommanderColors(data.deck.commander);
-      } else {
-        setCommanderColors([]);
-        setSelectedColors([]);
-      }
-    } catch (err) {
-      flash(err.message, "error");
-    }
+      if (data.deck.commander) await loadCommanderColors(data.deck.commander);
+      else { setCommanderColors([]); setSelectedColors([]); }
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
   async function loadCommanderColors(commanderName) {
     try {
-      const res = await fetch(
-        `${API}/api/external/search?q=${encodeURIComponent(commanderName)}`
-      );
+      const res  = await fetch(`${API}/api/external/search?q=${encodeURIComponent(commanderName)}`);
       const data = await res.json();
       if (data.cards?.length > 0) {
         const colors = data.cards[0].colors || [];
-        setCommanderColors(colors);
-        setSelectedColors([...colors]);
+        setCommanderColors(colors); setSelectedColors([...colors]);
       }
     } catch (_) {}
   }
 
   async function createDeck() {
-    if (!newDeckName.trim()) return flash("Enter a deck name.", "error");
+    if (!newDeckName.trim()) return showFlash("Enter a deck name.", "danger");
     try {
-      const res = await fetch(`${API}/api/decks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res  = await fetch(`${API}/api/decks`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newDeckName.trim(), format: "Commander", username }),
       });
       const data = await res.json();
-      setNewDeckName("");
-      setShowNewDeckInput(false);
-      const decks = await loadDecks();
+      setNewDeckName(""); setShowNewDeckInput(false);
+      await loadDecks();
       await selectDeck(data.deck);
-      flash("Deck created!");
-    } catch (err) {
-      flash(err.message, "error");
-    }
+      showFlash("Deck created!");
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
   async function deleteDeck(deck) {
@@ -130,465 +100,241 @@ export default function DeckPage() {
     try {
       await fetch(`${API}/api/decks/${deck._id}`, { method: "DELETE" });
       const decks = await loadDecks();
-      if (currentDeck?._id === deck._id) {
-        setCurrentDeck(null);
-        setDeckCards([]);
-      }
-    } catch (err) {
-      flash(err.message, "error");
-    }
+      if (currentDeck?._id === deck._id) { setCurrentDeck(null); setDeckCards([]); }
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
-  // ── Card search ────────────────────────────────────────────────────────────
   async function performSearch() {
     if (!searchQuery.trim()) return setSearchResults([]);
     setIsSearching(true);
     try {
-      const res = await fetch(
-        `${API}/api/external/search?q=${encodeURIComponent(searchQuery)}`
-      );
+      const res  = await fetch(`${API}/api/external/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
       setSearchResults(data.cards || []);
-    } catch (err) {
-      flash(err.message, "error");
-    } finally {
-      setIsSearching(false);
-    }
+    } catch (err) { showFlash(err.message, "danger"); }
+    finally { setIsSearching(false); }
   }
 
-  // ── Color filter ───────────────────────────────────────────────────────────
   function toggleColor(color) {
-    if (commanderColors.length > 0 && !commanderColors.includes(color)) {
-      return flash(`${color} is outside your commander's color identity`, "error");
-    }
-    setSelectedColors((prev) =>
-      prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color]
+    if (commanderColors.length > 0 && !commanderColors.includes(color))
+      return showFlash(`${color} is outside your commander's color identity`, "danger");
+    setSelectedColors(prev =>
+      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
     );
   }
 
+  // ai
   const filteredCards = useMemo(() => {
     let cards = searchResults;
-    if (commanderColors.length > 0) {
-      cards = cards.filter(
-        (c) => !c.colors?.length || c.colors.every((x) => commanderColors.includes(x))
-      );
-    } else if (selectedColors.length > 0) {
-      cards = cards.filter(
-        (c) => !c.colors?.length || c.colors.every((x) => selectedColors.includes(x))
-      );
-    }
+    if (commanderColors.length > 0)
+      cards = cards.filter(c => !c.colors?.length || c.colors.every(x => commanderColors.includes(x)));
+    else if (selectedColors.length > 0)
+      cards = cards.filter(c => !c.colors?.length || c.colors.every(x => selectedColors.includes(x)));
     return cards;
   }, [searchResults, commanderColors, selectedColors]);
 
-  // ── Add / update / remove cards ────────────────────────────────────────────
   async function addCard(card) {
-    if (!currentDeck) return flash("Select a deck first.", "error");
+    if (!currentDeck) return showFlash("Select a deck first.", "danger");
     try {
-      const res = await fetch(`${API}/api/decks/${currentDeck._id}/cards`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res  = await fetch(`${API}/api/decks/${currentDeck._id}/cards`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cardName: card.name, quantity: 1 }),
       });
       const data = await res.json();
       setDeckCards(data.deck.cards || []);
-      flash(`Added ${card.name}`);
-    } catch (err) {
-      flash(err.message, "error");
-    }
+      showFlash(`Added ${card.name}`);
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
   async function updateQty(card, qty) {
     try {
-      const res = await fetch(
-        `${API}/api/decks/${currentDeck._id}/cards/${card._id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ quantity: qty }),
-        }
-      );
+      const res  = await fetch(`${API}/api/decks/${currentDeck._id}/cards/${card._id}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: qty }),
+      });
       const data = await res.json();
       setDeckCards(data.deck.cards || []);
-    } catch (err) {
-      flash(err.message, "error");
-    }
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
   async function removeCard(card) {
     try {
-      const res = await fetch(
-        `${API}/api/decks/${currentDeck._id}/cards/${card._id}`,
-        { method: "DELETE" }
-      );
+      const res  = await fetch(`${API}/api/decks/${currentDeck._id}/cards/${card._id}`, { method: "DELETE" });
       const data = await res.json();
       setDeckCards(data.deck.cards || []);
-      flash(`Removed ${card.card_name}`);
-    } catch (err) {
-      flash(err.message, "error");
-    }
+      showFlash(`Removed ${card.card_name}`);
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
   async function clearDeck() {
-    if (!currentDeck || !confirm("Remove all cards from this deck?")) return;
-    for (const card of [...deckCards]) {
-      await fetch(`${API}/api/decks/${currentDeck._id}/cards/${card._id}`, {
-        method: "DELETE",
-      });
-    }
+    if (!currentDeck || !confirm("Remove all cards?")) return;
+    for (const card of [...deckCards])
+      await fetch(`${API}/api/decks/${currentDeck._id}/cards/${card._id}`, { method: "DELETE" });
     setDeckCards([]);
-    flash("Deck cleared");
+    showFlash("Deck cleared");
   }
 
-  // ── Commander ──────────────────────────────────────────────────────────────
   async function setCommander(card) {
     if (!currentDeck) return;
     try {
       await fetch(`${API}/api/decks/${currentDeck._id}/commander`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commander: card.name }),
       });
-      setCurrentDeck((prev) => ({ ...prev, commander: card.name }));
+      setCurrentDeck(prev => ({ ...prev, commander: card.name }));
       const colors = card.colors || [];
-      setCommanderColors(colors);
-      setSelectedColors([...colors]);
+      setCommanderColors(colors); setSelectedColors([...colors]);
       setShowCommander(false);
-      flash(`${card.name} set as commander`);
-    } catch (err) {
-      flash(err.message, "error");
-    }
+      showFlash(`${card.name} set as commander`);
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
   async function removeCommander() {
     if (!currentDeck || !confirm("Remove commander?")) return;
     try {
       await fetch(`${API}/api/decks/${currentDeck._id}/commander`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commander: null }),
       });
-      setCurrentDeck((prev) => ({ ...prev, commander: null }));
-      setCommanderColors([]);
-      setSelectedColors([]);
-      flash("Commander removed");
-    } catch (err) {
-      flash(err.message, "error");
-    }
+      setCurrentDeck(prev => ({ ...prev, commander: null }));
+      setCommanderColors([]); setSelectedColors([]);
+      showFlash("Commander removed");
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
-  // ── Recommendations ────────────────────────────────────────────────────────
   async function loadRecs() {
-    if (!currentDeck) return flash("Select a deck first.", "error");
-    if (!currentDeck.commander) return flash("Set a commander for recommendations.", "error");
-    setIsLoadingRecs(true);
-    setShowRecs(true);
+    if (!currentDeck) return showFlash("Select a deck first.", "danger");
+    if (!currentDeck.commander) return showFlash("Set a commander for recommendations.", "danger");
+    setIsLoadingRecs(true); setShowRecs(true);
     try {
-      const res = await fetch(
-        `${API}/api/external/recommendations/${encodeURIComponent(currentDeck.commander)}`
-      );
+      const res  = await fetch(`${API}/api/external/recommendations/${encodeURIComponent(currentDeck.commander)}`);
       const data = await res.json();
       setRecommendations(data.recommendations);
-    } catch (err) {
-      flash(err.message, "error");
-    } finally {
-      setIsLoadingRecs(false);
-    }
+    } catch (err) { showFlash(err.message, "danger"); }
+    finally { setIsLoadingRecs(false); }
   }
 
   async function addRecommended(cardName) {
     if (!currentDeck) return;
     try {
-      const res = await fetch(`${API}/api/decks/${currentDeck._id}/cards`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res  = await fetch(`${API}/api/decks/${currentDeck._id}/cards`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cardName, quantity: 1 }),
       });
       const data = await res.json();
       setDeckCards(data.deck.cards || []);
-      flash(`Added ${cardName}`);
-    } catch (err) {
-      flash(err.message, "error");
-    }
+      showFlash(`Added ${cardName}`);
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
   const deckCount = deckCards.reduce((s, c) => s + c.quantity, 0);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh" }}>
-      {/* Header */}
-      <header
-        style={{
-          background: "var(--sunken)",
-          borderBottom: "1px solid var(--gold-mid)",
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1500,
-            margin: "0 auto",
-            display: "flex",
-            alignItems: "center",
-            gap: "1rem",
-            padding: "0.75rem 1.25rem",
-          }}
-        >
-          {/* Brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 6,
-                border: "1px solid var(--gold)",
-                background: "var(--void)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "'Cinzel Decorative', serif",
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--gold-bright)",
-                flexShrink: 0,
-              }}
-            >
-              BB
-            </div>
-            <div>
-              <h1
-                style={{
-                  fontFamily: "'Cinzel Decorative', serif",
-                  fontSize: "1.3rem",
-                  fontWeight: 700,
-                  color: "var(--gold-bright)",
-                  letterSpacing: "0.04em",
-                  lineHeight: 1,
-                  margin: 0,
-                }}
-              >
-                BinderBase
-              </h1>
-              <p style={{ fontStyle: "italic", fontSize: "0.8rem", color: "var(--text-muted)", margin: "2px 0 0" }}>
-                Deck builder & card browser
-              </p>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-            <button onClick={loadRecs} style={btnGhostStyle}>💡 Suggestions</button>
-            <button onClick={() => setShowDeckSelector(true)} style={{ ...btnGhostStyle, minWidth: 170, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis" }}>
-              📚 {currentDeck ? currentDeck.name : "Select Deck"}
+    <div className="min-vh-100" style={{ background: "radial-gradient(ellipse at top, #1a0533 0%, #0d0117 60%)" }}>
+      {/* Navbar */}
+      <nav className="navbar navbar-dark sticky-top border-bottom border-secondary"
+           style={{ background: "rgba(26,5,51,0.95)", backdropFilter: "blur(8px)" }}>
+        <div className="container-fluid">
+          <span className="navbar-brand fw-bold">
+            <i className="bi bi-stack me-2 text-info" />BinderBase
+          </span>
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <button className="btn btn-sm btn-outline-warning" onClick={loadRecs}>
+              <i className="bi bi-lightbulb me-1" />Suggestions
             </button>
-
+            <button className="btn btn-sm btn-outline-secondary" onClick={() => setShowDeckSelector(true)}>
+              <i className="bi bi-collection me-1" />
+              {currentDeck ? currentDeck.name : "Select Deck"}
+            </button>
             {showNewDeckInput ? (
-              <div style={{ display: "flex", gap: "0.4rem" }}>
-                <input
-                  type="text"
-                  placeholder="Deck name…"
-                  value={newDeckName}
-                  onChange={(e) => setNewDeckName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && createDeck()}
-                  autoFocus
-                  style={{ padding: "0.4rem 0.6rem", borderRadius: 4, border: "1px solid var(--gold-mid)", background: "var(--sunken)", color: "var(--text-primary)", fontFamily: "'Crimson Pro', serif", fontSize: "0.9rem", outline: "none" }}
-                />
-                <button onClick={createDeck} style={btnStyle}>Create</button>
-                <button onClick={() => setShowNewDeckInput(false)} style={btnGhostStyle}>✕</button>
+              <div className="d-flex gap-1">
+                <input type="text" className="form-control form-control-sm" placeholder="Deck name…"
+                       value={newDeckName} onChange={e => setNewDeckName(e.target.value)}
+                       onKeyDown={e => e.key === "Enter" && createDeck()} autoFocus style={{ width: 160 }} />
+                <button className="btn btn-sm btn-primary" onClick={createDeck}>Create</button>
+                <button className="btn btn-sm btn-outline-secondary" onClick={() => setShowNewDeckInput(false)}>✕</button>
               </div>
             ) : (
-              <button onClick={() => setShowNewDeckInput(true)} style={btnStyle}>+ New Deck</button>
+              <button className="btn btn-sm btn-primary" onClick={() => setShowNewDeckInput(true)}>
+                <i className="bi bi-plus-lg me-1" />New Deck
+              </button>
             )}
-
-            <button onClick={() => router.push("/library")} style={btnGhostStyle}>
-              📚 Library
+            <button className="btn btn-sm btn-outline-info" onClick={() => router.push("/library")}>
+              <i className="bi bi-book me-1" />Library
             </button>
-            <button
-              onClick={() => { localStorage.clear(); router.push("/login"); }}
-              style={btnGhostStyle}
-            >
+            <button className="btn btn-sm btn-outline-secondary"
+                    onClick={() => { localStorage.clear(); router.push("/login"); }}>
               Sign Out
             </button>
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Flash messages */}
-      {(error || success) && (
-        <div
-          style={{
-            margin: "0.75rem 1.25rem 0",
-            padding: "0.5rem 0.85rem",
-            borderRadius: 4,
-            fontSize: "0.95rem",
-            border: error ? "1px solid rgba(127,29,29,0.5)" : "1px solid rgba(20,83,45,0.5)",
-            background: error ? "rgba(127,29,29,0.2)" : "rgba(20,83,45,0.2)",
-            color: error ? "#f87171" : "#6ee7b7",
-          }}
-        >
-          {error || success}
+      {/* Flash */}
+      {flash && (
+        <div className={`alert alert-${flash.type === "danger" ? "danger" : "success"} alert-dismissible mx-3 mt-3 py-2`}>
+          {flash.msg}
         </div>
       )}
 
-      {/* Main 3-column grid */}
-      <div
-        style={{
-          maxWidth: 1500,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "250px 1fr 310px",
-          gap: "1rem",
-          padding: "1rem 1.25rem",
-        }}
-      >
-        {/* Sidebar */}
-        <SearchSidebar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onSearch={performSearch}
-          isSearching={isSearching}
-          selectedColors={selectedColors}
-          commanderColors={commanderColors}
-          onToggleColor={toggleColor}
-        />
-
-        {/* Card results */}
-        <main
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--gold-dim)",
-            borderRadius: 8,
-            padding: "1.25rem",
-            minHeight: 500,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "1rem",
-              paddingBottom: "0.75rem",
-              borderBottom: "1px solid var(--gold-dim)",
-            }}
-          >
-            <span style={sectionLabelStyle}>Search Results</span>
-            <span style={{ fontStyle: "italic", fontSize: "0.85rem", color: "var(--text-muted)" }}>
-              {filteredCards.length} cards
-            </span>
+      {/* Main layout */}
+      <div className="container-fluid p-3">
+        <div className="row g-3" style={{ gridTemplateColumns: "250px 1fr 300px" }}>
+          {/* Sidebar */}
+          <div className="col-12 col-lg-2">
+            <SearchSidebar
+              searchQuery={searchQuery} onSearchChange={setSearchQuery}
+              onSearch={performSearch} isSearching={isSearching}
+              selectedColors={selectedColors} commanderColors={commanderColors}
+              onToggleColor={toggleColor}
+            />
           </div>
-          <CardGrid
-            cards={filteredCards}
-            onAddCard={addCard}
-            onHover={setHoveredCard}
-            searchQuery={searchQuery}
-          />
-        </main>
 
-        {/* Deck panel */}
-        <DeckPanel
-          deck={currentDeck}
-          cards={deckCards}
-          deckCount={deckCount}
-          onSetCommander={() => setShowCommander(true)}
-          onRemoveCommander={removeCommander}
-          onUpdateQty={updateQty}
-          onRemoveCard={removeCard}
-          onClear={clearDeck}
-          onHoverCard={setHoveredCard}
-        />
+          {/* Card grid */}
+          <div className="col-12 col-lg-7">
+            <div className="card border-secondary">
+              <div className="card-header d-flex justify-content-between align-items-center border-secondary">
+                <span className="section-label mb-0">Search Results</span>
+                <span className="badge bg-secondary">{filteredCards.length} cards</span>
+              </div>
+              <div className="card-body">
+                <CardGrid
+                  cards={filteredCards} onAddCard={addCard}
+                  onHover={setHoveredCard} searchQuery={searchQuery}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Deck panel */}
+          <div className="col-12 col-lg-3">
+            <DeckPanel
+              deck={currentDeck} cards={deckCards} deckCount={deckCount}
+              onSetCommander={() => setShowCommander(true)}
+              onRemoveCommander={removeCommander}
+              onUpdateQty={updateQty} onRemoveCard={removeCard}
+              onClear={clearDeck} onHoverCard={setHoveredCard}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Card preview tooltip */}
+      {/* Card preview */}
       {hoveredCard && (hoveredCard.card_image || hoveredCard.image) && (
-        <div
-          style={{
-            position: "fixed",
-            right: "2rem",
-            top: "50%",
-            transform: "translateY(-50%)",
-            pointerEvents: "none",
-            zIndex: 10000,
-          }}
-        >
-          <img
-            src={hoveredCard.card_image || hoveredCard.image}
-            alt={hoveredCard.card_name || hoveredCard.name}
-            style={{
-              width: 240,
-              borderRadius: 8,
-              border: "1px solid var(--gold)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.7), 0 0 20px rgba(139,105,20,0.25)",
-            }}
-          />
+        <div style={{ position: "fixed", right: "2rem", top: "50%", transform: "translateY(-50%)",
+                      pointerEvents: "none", zIndex: 9000 }}>
+          <img src={hoveredCard.card_image || hoveredCard.image}
+               alt={hoveredCard.card_name || hoveredCard.name}
+               style={{ width: 230, borderRadius: 8, border: "1px solid #6f42c1",
+                        boxShadow: "0 0 30px rgba(111,66,193,0.6)" }} />
         </div>
       )}
 
-      {/* Modals */}
-      {showDeckSelector && (
-        <DeckSelectorModal
-          decks={allDecks}
-          currentDeckId={currentDeck?._id}
-          onSelect={selectDeck}
-          onDelete={deleteDeck}
-          onClose={() => setShowDeckSelector(false)}
-        />
-      )}
-      {showCommander && (
-        <CommanderModal
-          onSelect={setCommander}
-          onClose={() => setShowCommander(false)}
-        />
-      )}
-      {showRecs && (
-        <RecommendationsModal
-          recommendations={recommendations}
-          isLoading={isLoadingRecs}
-          onAddCard={addRecommended}
-          onClose={() => setShowRecs(false)}
-        />
-      )}
+      {showDeckSelector && <DeckSelectorModal decks={allDecks} currentDeckId={currentDeck?._id}
+        onSelect={selectDeck} onDelete={deleteDeck} onClose={() => setShowDeckSelector(false)} />}
+      {showCommander && <CommanderModal onSelect={setCommander} onClose={() => setShowCommander(false)} />}
+      {showRecs && <RecommendationsModal recommendations={recommendations} isLoading={isLoadingRecs}
+        onAddCard={addRecommended} onClose={() => setShowRecs(false)} />}
     </div>
   );
 }
-
-const sectionLabelStyle = {
-  fontFamily: "'Cinzel', serif",
-  fontSize: "0.65rem",
-  fontWeight: 600,
-  color: "var(--text-muted)",
-  textTransform: "uppercase",
-  letterSpacing: "0.1em",
-};
-
-const btnStyle = {
-  padding: "0.45rem 1rem",
-  borderRadius: 4,
-  border: "1px solid var(--gold)",
-  background: "var(--gold-mid)",
-  color: "var(--gold-light)",
-  fontFamily: "'Cinzel', serif",
-  fontSize: "0.7rem",
-  fontWeight: 600,
-  letterSpacing: "0.07em",
-  textTransform: "uppercase",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
-
-const btnGhostStyle = {
-  padding: "0.45rem 1rem",
-  borderRadius: 4,
-  border: "1px solid var(--gold-dim)",
-  background: "transparent",
-  color: "#a08850",
-  fontFamily: "'Cinzel', serif",
-  fontSize: "0.7rem",
-  fontWeight: 600,
-  letterSpacing: "0.07em",
-  textTransform: "uppercase",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};

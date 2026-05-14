@@ -12,8 +12,8 @@ require('dotenv').config()
 
 const { MongoClient } = require('mongodb')
 
-const uri    = process.env.MONGODB_URI     || 'mongodb://localhost:27017'
-const dbName = process.env.MONGODB_DB_NAME || 'binderbase'
+const uri    = process.env.MONGODB_URI
+const dbName = process.env.MONGODB_DB_NAME
 
 // Iconic cards to seed into the local library
 const SEED_CARDS = [

@@ -3,112 +3,88 @@
 import { useState } from "react";
 
 const TABS = [
-  { key: "topCards", label: "Top Cards" },
-  { key: "creatures", label: "Creatures" },
-  { key: "instants", label: "Instants" },
-  { key: "sorceries", label: "Sorceries" },
-  { key: "artifacts", label: "Artifacts" },
+  { key: "topCards",     label: "Top Cards" },
+  { key: "creatures",    label: "Creatures" },
+  { key: "instants",     label: "Instants" },
+  { key: "sorceries",    label: "Sorceries" },
+  { key: "artifacts",    label: "Artifacts" },
   { key: "enchantments", label: "Enchantments" },
-  { key: "lands", label: "Lands" },
+  { key: "lands",        label: "Lands" },
 ];
 
+// ai
 export default function RecommendationsModal({ recommendations, isLoading, onAddCard, onClose }) {
   const [activeTab, setActiveTab] = useState("topCards");
-
   const cards = recommendations?.[activeTab] || [];
 
   return (
-    <div style={backdropStyle} onClick={onClose}>
-      <div style={{ ...modalStyle, width: "min(700px, 95vw)" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-          <h2 style={h2Style}>💡 Card Suggestions</h2>
-          <button onClick={onClose} style={closeBtnStyle}>×</button>
-        </div>
-
-        {isLoading ? (
-          <p style={{ textAlign: "center", fontStyle: "italic", color: "var(--text-muted)", padding: "2rem 0" }}>Loading recommendations…</p>
-        ) : !recommendations ? (
-          <p style={{ textAlign: "center", fontStyle: "italic", color: "var(--text-muted)", padding: "2rem 0" }}>No recommendations available.</p>
-        ) : (
-          <>
-            {/* Tabs */}
-            <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", paddingBottom: "0.75rem", borderBottom: "1px solid var(--gold-dim)", marginBottom: "0.75rem" }}>
-              {TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  style={{
-                    padding: "0.3rem 0.75rem",
-                    borderRadius: 4,
-                    border: "1px solid var(--gold-dim)",
-                    background: activeTab === tab.key ? "var(--gold-mid)" : "var(--sunken)",
-                    color: activeTab === tab.key ? "var(--gold-light)" : "var(--text-muted)",
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: "0.65rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Cards */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", maxHeight: 440, overflowY: "auto" }}>
-              {cards.length === 0 ? (
-                <p style={{ textAlign: "center", fontStyle: "italic", color: "var(--text-muted)", padding: "1.5rem 0" }}>
-                  No recommendations in this category.
-                </p>
-              ) : (
-                cards.map((card) => (
-                  <div
-                    key={card.name}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "0.6rem 0.75rem",
-                      borderRadius: 4,
-                      border: "1px solid var(--void)",
-                      background: "var(--sunken)",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <div style={{ minWidth: 0, marginRight: "0.75rem" }}>
-                      <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.82rem", fontWeight: 600, color: "var(--gold-bright)", margin: "0 0 4px" }}>
-                        {card.name}
-                      </p>
-                      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                        {card.inclusion != null && (
-                          <span style={{ padding: "0.1rem 0.45rem", borderRadius: 3, fontSize: "0.65rem", fontFamily: "'Cinzel', serif", background: "rgba(20,83,45,0.2)", color: "#6ee7b7", border: "1px solid rgba(20,83,45,0.4)" }}>
-                            📊 {card.inclusion}%
-                          </span>
-                        )}
-                        {card.synergy != null && (
-                          <span style={{ padding: "0.1rem 0.45rem", borderRadius: 3, fontSize: "0.65rem", fontFamily: "'Cinzel', serif", background: "rgba(61,46,14,0.4)", color: "var(--gold-bright)", border: "1px solid var(--gold-dim)" }}>
-                            ⚡ {card.synergy}%
-                          </span>
-                        )}
+    <div className="modal d-block modal-open-backdrop" onClick={onClose}>
+      <div className="modal-dialog modal-xl modal-dialog-scrollable" onClick={e => e.stopPropagation()}>
+        <div className="modal-content border-secondary">
+          <div className="modal-header border-secondary">
+            <h5 className="modal-title text-white">
+              <i className="bi bi-lightbulb me-2 text-warning" />Card Suggestions
+            </h5>
+            <button className="btn-close btn-close-white" onClick={onClose} />
+          </div>
+          <div className="modal-body">
+            {isLoading ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" />
+                <p className="text-muted mt-2">Loading recommendations…</p>
+              </div>
+            ) : !recommendations ? (
+              <p className="text-muted fst-italic text-center py-4">No recommendations available.</p>
+            ) : (
+              <>
+                <ul className="nav nav-pills flex-wrap gap-1 mb-3">
+                  {TABS.map(tab => (
+                    <li key={tab.key} className="nav-item">
+                      <button className={`nav-link py-1 px-2 small ${activeTab === tab.key ? "active" : ""}`}
+                              onClick={() => setActiveTab(tab.key)}>
+                        {tab.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="d-flex flex-column gap-2">
+                  {cards.length === 0 ? (
+                    <p className="text-muted fst-italic text-center py-3">No recommendations in this category.</p>
+                  ) : (
+                    cards.map(card => (
+                      <div key={card.name}
+                           className="d-flex align-items-center justify-content-between p-2 rounded border border-secondary"
+                           style={{ background: "rgba(0,0,0,0.3)" }}>
+                        <div>
+                          <p className="fw-semibold text-info mb-1 small">{card.name}</p>
+                          <div className="d-flex gap-2">
+                            {card.inclusion != null && (
+                              <span className="badge bg-success bg-opacity-25 text-success border border-success"
+                                    style={{ fontSize: "0.65rem" }}>
+                                📊 {card.inclusion}%
+                              </span>
+                            )}
+                            {card.synergy != null && (
+                              <span className="badge bg-primary bg-opacity-25 text-info border border-primary"
+                                    style={{ fontSize: "0.65rem" }}>
+                                ⚡ {card.synergy}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button className="btn btn-sm btn-outline-primary ms-3"
+                                onClick={() => onAddCard(card.name)}>
+                          + Add
+                        </button>
                       </div>
-                    </div>
-                    <button onClick={() => onAddCard(card.name)} style={btnSmStyle}>+ Add</button>
-                  </div>
-                ))
-              )}
-            </div>
-          </>
-        )}
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-const backdropStyle = { position: "fixed", inset: 0, background: "rgba(10,7,0,0.88)", backdropFilter: "blur(4px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" };
-const modalStyle = { background: "var(--surface)", border: "1px solid var(--gold)", borderRadius: 8, padding: "1.75rem", maxHeight: "85vh", overflowY: "auto", boxShadow: "0 16px 48px rgba(0,0,0,0.8)" };
-const h2Style = { fontFamily: "'Cinzel Decorative', serif", fontSize: "1.15rem", fontWeight: 700, color: "var(--gold-bright)", margin: 0 };
-const closeBtnStyle = { width: 28, height: 28, borderRadius: 3, border: "1px solid var(--gold-dim)", background: "transparent", color: "var(--text-muted)", fontSize: "1.1rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
-const btnSmStyle = { padding: "0.3rem 0.75rem", borderRadius: 4, border: "1px solid var(--gold)", background: "var(--gold-mid)", color: "var(--gold-light)", fontFamily: "'Cinzel', serif", fontSize: "0.65rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" };

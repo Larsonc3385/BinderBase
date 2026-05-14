@@ -1,26 +1,66 @@
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Vapor theme is loaded via CDN in layout.js */
+/* This file holds only minimal global overrides */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #1a0533; }
+::-webkit-scrollbar-thumb { background: #6f42c1; border-radius: 3px; }
+
+/* Card image cover */
+.card-img-cover {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+
+/* Card hover lift */
+.card-hover {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 20px rgba(111, 66, 193, 0.5) !important;
+}
+
+/* Sticky sidebar */
+.sidebar-sticky {
+  position: sticky;
+  top: 5rem;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+}
+
+/* Deck list scroll */
+.deck-list-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* Modal backdrop when shown via React state */
+.modal-open-backdrop {
+  display: block;
+  background: rgba(10, 2, 20, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+/* Glow accents matching Vapor */
+.glow-purple {
+  box-shadow: 0 0 12px rgba(111, 66, 193, 0.6);
+}
+.glow-pink {
+  box-shadow: 0 0 12px rgba(232, 62, 140, 0.6);
+}
+
+/* Section label */
+.section-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9b59b6;
 }

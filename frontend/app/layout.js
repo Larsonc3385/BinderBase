@@ -7,12 +7,17 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" data-bs-theme="dark">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        {/* Bootstrap 5 + Bootswatch Vapor theme */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap"
           rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootswatch@5/dist/vapor/bootstrap.min.css"
+        />
+        {/* Bootstrap Icons */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
         />
       </head>
       <body>{children}</body>

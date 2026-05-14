@@ -11,25 +11,25 @@ export default function LibraryPage() {
   const router   = useRouter();
   const username = typeof window !== "undefined" ? localStorage.getItem("username") : null;
 
-  // ── State ────────────────────────────────────────────────────────────────
-  const [library, setLibrary]           = useState([]);      // local Mongo cards
-  const [loadingLib, setLoadingLib]     = useState(true);
-  const [searchQuery, setSearchQuery]   = useState("");
-  const [searchResults, setSearchResults] = useState([]);    // Scryfall results
-  const [isSearching, setIsSearching]   = useState(false);
-  const [selectedCardId, setSelectedCardId] = useState(null); // for detail modal
-  const [flash, setFlash]               = useState(null);
-  const [importingId, setImportingId]   = useState(null);    // tracks which card is being imported
+  const [library, setLibrary]             = useState([]);
+  const [loadingLib, setLoadingLib]       = useState(true);
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching]     = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState(null);
+  const [flash, setFlash]                 = useState(null);
+  const [importingId, setImportingId]     = useState(null);
 
-  // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!localStorage.getItem("username")) router.push("/login");
   }, [router]);
 
-  // ── Load local library on mount ───────────────────────────────────────────
-  useEffect(() => {
-    loadLibrary();
-  }, []);
+  useEffect(() => { loadLibrary(); }, []);
+
+  function showFlash(msg, type = "success") {
+    setFlash({ msg, type });
+    setTimeout(() => setFlash(null), 3000);
+  }
 
   // ai
   async function loadLibrary() {
@@ -38,255 +38,205 @@ export default function LibraryPage() {
       const res  = await fetch(`${API}/api/cards`);
       const data = await res.json();
       setLibrary(data.cards || []);
-    } catch (err) {
-      showFlash(err.message, "error");
-    } finally {
-      setLoadingLib(false);
-    }
+    } catch (err) { showFlash(err.message, "danger"); }
+    finally { setLoadingLib(false); }
   }
 
-  // ── Flash helper ──────────────────────────────────────────────────────────
-  function showFlash(msg, type = "success") {
-    setFlash({ msg, type });
-    setTimeout(() => setFlash(null), 3000);
-  }
-
-  // ── External search (calls backend → Scryfall) ────────────────────────────
-  // ai
   async function performSearch() {
     if (!searchQuery.trim()) return setSearchResults([]);
     setIsSearching(true);
     try {
-      const res  = await fetch(
-        `${API}/api/external/search?q=${encodeURIComponent(searchQuery)}`
-      );
+      const res  = await fetch(`${API}/api/external/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
       setSearchResults(data.cards || []);
-    } catch (err) {
-      showFlash(err.message, "error");
-    } finally {
-      setIsSearching(false);
-    }
+    } catch (err) { showFlash(err.message, "danger"); }
+    finally { setIsSearching(false); }
   }
 
-  // ── Import a Scryfall result into local Mongo library ─────────────────────
   // ai
   async function importCard(card) {
     setImportingId(card.scryfallId);
     try {
       const res  = await fetch(`${API}/api/cards`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(card),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(card),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      if (data.duplicate) {
-        showFlash(`"${card.name}" is already in your library.`, "error");
-      } else {
-        showFlash(`"${card.name}" added to library!`);
-        setLibrary(prev => [data.card, ...prev]);
-      }
-    } catch (err) {
-      showFlash(err.message, "error");
-    } finally {
-      setImportingId(null);
-    }
+      if (data.duplicate) showFlash(`"${card.name}" is already in your library.`, "warning");
+      else { showFlash(`"${card.name}" added to library!`); setLibrary(prev => [data.card, ...prev]); }
+    } catch (err) { showFlash(err.message, "danger"); }
+    finally { setImportingId(null); }
   }
 
-  // ── Remove a card from local library ─────────────────────────────────────
   async function removeCard(card) {
     if (!confirm(`Remove "${card.name}" from your library?`)) return;
     try {
       await fetch(`${API}/api/cards/${card._id}`, { method: "DELETE" });
       setLibrary(prev => prev.filter(c => c._id !== card._id));
       showFlash(`"${card.name}" removed.`);
-    } catch (err) {
-      showFlash(err.message, "error");
-    }
+    } catch (err) { showFlash(err.message, "danger"); }
   }
 
-  // ── Check if a Scryfall card is already in the local library ─────────────
   function isInLibrary(scryfallId) {
     return library.some(c => c.scryfallId === scryfallId);
   }
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-
-      {/* Header */}
-      <header style={headerStyle}>
-        <div style={headerInnerStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div style={logoStyle}>BB</div>
-            <div>
-              <h1 style={h1Style}>BinderBase</h1>
-              <p style={{ fontStyle: "italic", fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
-                Card Library
-              </p>
-            </div>
-          </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
-            <button onClick={() => router.push("/deck")} style={btnGhostStyle}>🃏 Deck Builder</button>
-            <button onClick={() => { localStorage.clear(); router.push("/login"); }} style={btnGhostStyle}>
+    <div className="min-vh-100" style={{ background: "radial-gradient(ellipse at top, #1a0533 0%, #0d0117 60%)" }}>
+      {/* Navbar */}
+      <nav className="navbar navbar-dark sticky-top border-bottom border-secondary"
+           style={{ background: "rgba(26,5,51,0.95)", backdropFilter: "blur(8px)" }}>
+        <div className="container-fluid">
+          <span className="navbar-brand fw-bold">
+            <i className="bi bi-stack me-2 text-info" />BinderBase
+            <span className="text-muted fw-normal ms-2 small">/ Library</span>
+          </span>
+          <div className="d-flex gap-2">
+            <button className="btn btn-sm btn-outline-info" onClick={() => router.push("/deck")}>
+              <i className="bi bi-layers me-1" />Deck Builder
+            </button>
+            <button className="btn btn-sm btn-outline-secondary"
+                    onClick={() => { localStorage.clear(); router.push("/login"); }}>
               Sign Out
             </button>
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Flash */}
       {flash && (
-        <div style={{
-          margin: "0.75rem 1.25rem 0",
-          padding: "0.5rem 0.85rem",
-          borderRadius: 4,
-          fontSize: "0.95rem",
-          border: flash.type === "error" ? "1px solid rgba(127,29,29,0.5)" : "1px solid rgba(20,83,45,0.5)",
-          background: flash.type === "error" ? "rgba(127,29,29,0.2)" : "rgba(20,83,45,0.2)",
-          color: flash.type === "error" ? "#f87171" : "#6ee7b7",
-        }}>
+        <div className={`alert alert-${flash.type} alert-dismissible mx-3 mt-3 py-2`}>
           {flash.msg}
         </div>
       )}
 
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "1rem 1.25rem", display: "flex", flexDirection: "column", gap: "2rem" }}>
+      <div className="container-fluid p-3 d-flex flex-column gap-4">
 
-        {/* ── DISCOVER SECTION (external search + import) ── */}
-        <section style={panelStyle}>
-          <h2 style={sectionHeadingStyle}>🔍 Discover Cards</h2>
-          <p style={{ fontStyle: "italic", color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "1rem" }}>
-            Search Scryfall and import cards into your local library.
-          </p>
-
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-            <input
-              type="search"
-              placeholder="Search Scryfall… (e.g. 'lightning bolt', 'is:commander')"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && performSearch()}
-              style={inputStyle}
-            />
-            <button onClick={performSearch} disabled={isSearching} style={btnStyle}>
-              {isSearching ? "Searching…" : "Search"}
-            </button>
+        {/* Discover section */}
+        <div className="card border-secondary">
+          <div className="card-header border-secondary">
+            <h5 className="mb-0 text-white">
+              <i className="bi bi-search me-2 text-info" />Discover Cards
+            </h5>
+            <small className="text-muted">Search Scryfall and import cards into your local library</small>
           </div>
+          <div className="card-body">
+            <div className="input-group mb-3">
+              <input type="search" className="form-control"
+                     placeholder="Search Scryfall… (e.g. 'lightning bolt', 'is:commander')"
+                     value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                     onKeyDown={e => e.key === "Enter" && performSearch()} />
+              <button className="btn btn-outline-info" onClick={performSearch} disabled={isSearching}>
+                {isSearching
+                  ? <span className="spinner-border spinner-border-sm" />
+                  : <><i className="bi bi-search me-1" />Search</>}
+              </button>
+            </div>
 
-          {searchResults.length > 0 && (
-            <div style={cardGridStyle}>
-              {searchResults.map((card) => {
-                const already = isInLibrary(card.scryfallId);
-                return (
-                  <div key={card.scryfallId} style={cardStyle}>
-                    {card.image && (
-                      <img src={card.image} alt={card.name}
-                           style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
-                    )}
-                    <div style={{ padding: "0.5rem 0.6rem" }}>
-                      <p style={cardNameStyle}>{card.name}</p>
-                      <p style={cardTypeStyle}>{card.type}</p>
-                      <button
-                        onClick={() => !already && importCard(card)}
-                        disabled={already || importingId === card.scryfallId}
-                        style={{
-                          ...btnSmStyle,
-                          marginTop: "0.4rem",
-                          width: "100%",
-                          opacity: already ? 0.5 : 1,
-                          cursor: already ? "default" : "pointer",
-                        }}
-                      >
-                        {already
-                          ? "✓ In Library"
-                          : importingId === card.scryfallId
-                          ? "Adding…"
-                          : "+ Add to Library"}
-                      </button>
+            {searchResults.length > 0 && (
+              <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
+                {searchResults.map(card => {
+                  const already = isInLibrary(card.scryfallId);
+                  return (
+                    <div key={card.scryfallId} className="col">
+                      <div className="card h-100 border-secondary">
+                        {card.image
+                          ? <img src={card.image} alt={card.name} className="card-img-cover" />
+                          : <div className="card-img-cover d-flex align-items-center justify-content-center text-muted small"
+                                 style={{ background: "#1a0533" }}>No Image</div>
+                        }
+                        <div className="card-body p-2 d-flex flex-column gap-1">
+                          <p className="card-title small fw-semibold text-truncate mb-0"
+                             style={{ color: "#e2b8ff", fontSize: "0.72rem" }}>{card.name}</p>
+                          <p className="text-muted fst-italic text-truncate mb-0"
+                             style={{ fontSize: "0.68rem" }}>{card.type}</p>
+                          <button
+                            onClick={() => !already && importCard(card)}
+                            disabled={already || importingId === card.scryfallId}
+                            className={`btn btn-sm mt-auto ${already ? "btn-outline-secondary" : "btn-outline-primary"}`}
+                            style={{ fontSize: "0.65rem" }}>
+                            {already ? "✓ In Library"
+                              : importingId === card.scryfallId ? "Adding…"
+                              : "+ Add to Library"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {searchResults.length === 0 && searchQuery && !isSearching && (
+              <p className="text-muted fst-italic">No results found.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Local library */}
+        <div className="card border-secondary">
+          <div className="card-header border-secondary d-flex align-items-center justify-content-between">
+            <h5 className="mb-0 text-white">
+              <i className="bi bi-collection me-2 text-primary" />My Library
+            </h5>
+            <span className="badge bg-primary bg-opacity-50">{library.length} cards</span>
+          </div>
+          <div className="card-body">
+            {loadingLib ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" />
+              </div>
+            ) : library.length === 0 ? (
+              <p className="text-muted fst-italic text-center py-3">
+                Your library is empty — search for cards above and import them!
+              </p>
+            ) : (
+              <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
+                {library.map(card => (
+                  <div key={card._id} className="col">
+                    <div className="card h-100 border-secondary card-hover"
+                         onClick={() => setSelectedCardId(card._id)}
+                         title="Click for full details">
+                      {card.image
+                        ? <img src={card.image} alt={card.name} className="card-img-cover" />
+                        : <div className="card-img-cover d-flex align-items-center justify-content-center text-muted small"
+                               style={{ background: "#1a0533" }}>No Image</div>
+                      }
+                      <div className="card-body p-2 d-flex flex-column gap-1">
+                        <p className="card-title small fw-semibold text-truncate mb-0"
+                           style={{ color: "#e2b8ff", fontSize: "0.72rem" }}>{card.name}</p>
+                        <p className="text-muted fst-italic text-truncate mb-0"
+                           style={{ fontSize: "0.68rem" }}>{card.type}</p>
+                        <div className="d-flex gap-1 mt-1 flex-wrap">
+                          <span className={`badge ${rarityBadge(card.rarity)}`} style={{ fontSize: "0.6rem" }}>
+                            {card.rarity}
+                          </span>
+                        </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); removeCard(card); }}
+                          className="btn btn-sm btn-outline-danger mt-auto"
+                          style={{ fontSize: "0.65rem" }}>
+                          <i className="bi bi-trash me-1" />Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-
-          {searchResults.length === 0 && searchQuery && !isSearching && (
-            <p style={{ fontStyle: "italic", color: "var(--text-muted)" }}>No results found.</p>
-          )}
-        </section>
-
-        {/* ── LOCAL LIBRARY (list view) ── */}
-        <section style={panelStyle}>
-          <h2 style={sectionHeadingStyle}>📚 My Library ({library.length} cards)</h2>
-
-          {loadingLib && (
-            <p style={{ fontStyle: "italic", color: "var(--text-muted)" }}>Loading…</p>
-          )}
-
-          {!loadingLib && library.length === 0 && (
-            <p style={{ fontStyle: "italic", color: "var(--text-muted)" }}>
-              Your library is empty — search for cards above and import them!
-            </p>
-          )}
-
-          {!loadingLib && library.length > 0 && (
-            <div style={cardGridStyle}>
-              {library.map((card) => (
-                <div
-                  key={card._id}
-                  style={{ ...cardStyle, cursor: "pointer" }}
-                  onClick={() => setSelectedCardId(card._id)}
-                  title="Click for full details"
-                >
-                  {card.image && (
-                    <img src={card.image} alt={card.name}
-                         style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
-                  )}
-                  <div style={{ padding: "0.5rem 0.6rem" }}>
-                    <p style={cardNameStyle}>{card.name}</p>
-                    <p style={cardTypeStyle}>{card.type}</p>
-                    <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: "2px 0 0", fontStyle: "italic" }}>
-                      {card.rarity} · {card.set}
-                    </p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeCard(card); }}
-                      style={{ ...btnDangerStyle, marginTop: "0.4rem", width: "100%" }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Card detail modal — loads full data via GET /api/cards/:id */}
       {selectedCardId && (
-        <CardDetailModal
-          cardId={selectedCardId}
-          onClose={() => setSelectedCardId(null)}
-        />
+        <CardDetailModal cardId={selectedCardId} onClose={() => setSelectedCardId(null)} />
       )}
     </div>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const headerStyle = { background: "var(--sunken)", borderBottom: "1px solid var(--gold-mid)", position: "sticky", top: 0, zIndex: 40 };
-const headerInnerStyle = { maxWidth: 1400, margin: "0 auto", display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1.25rem" };
-const logoStyle = { width: 48, height: 48, borderRadius: 6, border: "1px solid var(--gold)", background: "var(--void)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cinzel Decorative', serif", fontSize: 13, fontWeight: 700, color: "var(--gold-bright)", flexShrink: 0 };
-const h1Style = { fontFamily: "'Cinzel Decorative', serif", fontSize: "1.3rem", fontWeight: 700, color: "var(--gold-bright)", letterSpacing: "0.04em", lineHeight: 1, margin: 0 };
-const panelStyle = { background: "var(--surface)", border: "1px solid var(--gold-dim)", borderRadius: 8, padding: "1.5rem" };
-const sectionHeadingStyle = { fontFamily: "'Cinzel', serif", fontSize: "1rem", fontWeight: 600, color: "var(--gold-bright)", marginBottom: "0.75rem", marginTop: 0 };
-const cardGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem" };
-const cardStyle = { background: "var(--sunken)", border: "1px solid var(--gold-dim)", borderRadius: 6, overflow: "hidden", transition: "border-color 0.2s" };
-const cardNameStyle = { fontFamily: "'Cinzel', serif", fontSize: "0.7rem", fontWeight: 600, color: "var(--gold-bright)", margin: "0 0 2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
-const cardTypeStyle = { fontStyle: "italic", fontSize: "0.68rem", color: "var(--text-muted)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
-const inputStyle = { flex: 1, padding: "0.5rem 0.75rem", borderRadius: 4, border: "1px solid var(--gold-dim)", background: "var(--sunken)", color: "var(--text-primary)", fontFamily: "'Crimson Pro', serif", fontSize: "1rem", outline: "none" };
-const btnStyle = { padding: "0.45rem 1rem", borderRadius: 4, border: "1px solid var(--gold)", background: "var(--gold-mid)", color: "var(--gold-light)", fontFamily: "'Cinzel', serif", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.07em" };
-const btnSmStyle = { padding: "0.3rem 0.5rem", borderRadius: 4, border: "1px solid var(--gold)", background: "var(--gold-mid)", color: "var(--gold-light)", fontFamily: "'Cinzel', serif", fontSize: "0.65rem", fontWeight: 600, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.06em" };
-const btnGhostStyle = { padding: "0.45rem 1rem", borderRadius: 4, border: "1px solid var(--gold-dim)", background: "transparent", color: "#a08850", fontFamily: "'Cinzel', serif", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.07em" };
-const btnDangerStyle = { padding: "0.25rem 0.5rem", borderRadius: 4, border: "1px solid rgba(127,29,29,0.5)", background: "rgba(127,29,29,0.15)", color: "#f87171", fontFamily: "'Cinzel', serif", fontSize: "0.62rem", fontWeight: 600, cursor: "pointer", textTransform: "uppercase" };
+function rarityBadge(rarity) {
+  const map = { common: "bg-secondary", uncommon: "bg-info text-dark",
+                rare: "bg-warning text-dark", mythic: "bg-danger" };
+  return map[rarity?.toLowerCase()] || "bg-secondary";
+}

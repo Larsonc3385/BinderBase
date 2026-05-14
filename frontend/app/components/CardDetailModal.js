@@ -10,7 +10,6 @@ export default function CardDetailModal({ cardId, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
-  // Fetch full card details from local library when modal opens
   useEffect(() => {
     async function loadCard() {
       try {
@@ -28,119 +27,65 @@ export default function CardDetailModal({ cardId, onClose }) {
   }, [cardId]);
 
   return (
-    <div style={backdropStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-          <h2 style={h2Style}>{card ? card.name : "Card Details"}</h2>
-          <button onClick={onClose} style={closeBtnStyle}>×</button>
-        </div>
-
-        {loading && (
-          <p style={{ fontStyle: "italic", color: "var(--text-muted)", textAlign: "center", padding: "2rem 0" }}>
-            Loading…
-          </p>
-        )}
-
-        {error && (
-          <p style={{ color: "#f87171", textAlign: "center", padding: "2rem 0" }}>{error}</p>
-        )}
-
-        {card && (
-          <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-            {/* Card image */}
-            {card.image && (
-              <img
-                src={card.image}
-                alt={card.name}
-                style={{ width: 220, borderRadius: 8, border: "1px solid var(--gold)", flexShrink: 0 }}
-              />
+    <div className="modal d-block modal-open-backdrop" onClick={onClose}>
+      <div className="modal-dialog modal-lg modal-dialog-scrollable" onClick={e => e.stopPropagation()}>
+        <div className="modal-content border-secondary">
+          <div className="modal-header border-secondary">
+            <h5 className="modal-title text-white">
+              {card ? card.name : "Card Details"}
+            </h5>
+            <button className="btn-close btn-close-white" onClick={onClose} />
+          </div>
+          <div className="modal-body">
+            {loading && (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" />
+              </div>
             )}
-
-            {/* Card details */}
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <DetailRow label="Type"      value={card.type} />
-              <DetailRow label="Mana Cost" value={card.manaCost} />
-              <DetailRow label="Colors"    value={card.colors?.join(", ") || "Colorless"} />
-              <DetailRow label="Set"       value={card.set} />
-              <DetailRow label="Rarity"    value={card.rarity} />
-
-              {card.oracleText && (
-                <div style={{ marginTop: "1rem" }}>
-                  <span style={labelStyle}>Oracle Text</span>
-                  <p style={{ fontStyle: "italic", fontSize: "0.95rem", color: "var(--text-primary)", lineHeight: 1.6, marginTop: 4 }}>
-                    {card.oracleText}
+            {error && <div className="alert alert-danger">{error}</div>}
+            {card && (
+              <div className="row g-4">
+                {card.image && (
+                  <div className="col-auto">
+                    <img src={card.image} alt={card.name}
+                         style={{ width: 220, borderRadius: 8, border: "1px solid #6f42c1" }} />
+                  </div>
+                )}
+                <div className="col">
+                  <table className="table table-sm table-borderless text-light mb-3">
+                    <tbody>
+                      {card.type     && <tr><td className="text-muted small">Type</td><td>{card.type}</td></tr>}
+                      {card.manaCost && <tr><td className="text-muted small">Mana Cost</td><td>{card.manaCost}</td></tr>}
+                      {card.colors   && <tr><td className="text-muted small">Colors</td><td>{card.colors.join(", ") || "Colorless"}</td></tr>}
+                      {card.set      && <tr><td className="text-muted small">Set</td><td>{card.set}</td></tr>}
+                      {card.rarity   && <tr><td className="text-muted small">Rarity</td>
+                        <td><span className={`badge ${rarityBadge(card.rarity)}`}>{card.rarity}</span></td>
+                      </tr>}
+                    </tbody>
+                  </table>
+                  {card.oracleText && (
+                    <div className="p-3 rounded border border-secondary" style={{ background: "rgba(0,0,0,0.3)" }}>
+                      <p className="section-label mb-1">Oracle Text</p>
+                      <p className="text-light fst-italic small mb-0" style={{ lineHeight: 1.7 }}>
+                        {card.oracleText}
+                      </p>
+                    </div>
+                  )}
+                  <p className="text-muted small fst-italic mt-3 mb-0">
+                    Added {new Date(card.addedAt).toLocaleDateString()}
                   </p>
                 </div>
-              )}
-
-              <p style={{ marginTop: "1rem", fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic" }}>
-                Added to library {new Date(card.addedAt).toLocaleDateString()}
-              </p>
-            </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ai
-function DetailRow({ label, value }) {
-  if (!value) return null;
-  return (
-    <div style={{ marginBottom: "0.6rem" }}>
-      <span style={labelStyle}>{label}</span>
-      <span style={{ fontSize: "0.95rem", color: "var(--text-primary)", marginLeft: 8 }}>{value}</span>
-    </div>
-  );
+function rarityBadge(rarity) {
+  const map = { common: "bg-secondary", uncommon: "bg-info text-dark",
+                rare: "bg-warning text-dark", mythic: "bg-danger" };
+  return map[rarity?.toLowerCase()] || "bg-secondary";
 }
-
-const labelStyle = {
-  fontFamily: "'Cinzel', serif",
-  fontSize: "0.65rem",
-  fontWeight: 600,
-  color: "var(--text-muted)",
-  textTransform: "uppercase",
-  letterSpacing: "0.1em",
-};
-
-const backdropStyle = {
-  position: "fixed", inset: 0,
-  background: "rgba(10,7,0,0.88)",
-  backdropFilter: "blur(4px)",
-  zIndex: 9999,
-  display: "flex", alignItems: "center", justifyContent: "center",
-  padding: "1rem",
-};
-
-const modalStyle = {
-  background: "var(--surface)",
-  border: "1px solid var(--gold)",
-  borderRadius: 8,
-  padding: "1.75rem",
-  width: "min(640px, 95vw)",
-  maxHeight: "85vh",
-  overflowY: "auto",
-  boxShadow: "0 16px 48px rgba(0,0,0,0.8)",
-  position: "relative",
-};
-
-const h2Style = {
-  fontFamily: "'Cinzel Decorative', serif",
-  fontSize: "1.1rem",
-  fontWeight: 700,
-  color: "var(--gold-bright)",
-  margin: 0,
-};
-
-const closeBtnStyle = {
-  width: 28, height: 28,
-  borderRadius: 3,
-  border: "1px solid var(--gold-dim)",
-  background: "transparent",
-  color: "var(--text-muted)",
-  fontSize: "1.1rem", fontWeight: 600,
-  cursor: "pointer",
-  display: "flex", alignItems: "center", justifyContent: "center",
-};

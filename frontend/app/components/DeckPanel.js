@@ -1,229 +1,95 @@
 "use client";
 
 export default function DeckPanel({
-  deck,
-  cards,
-  deckCount,
-  onSetCommander,
-  onRemoveCommander,
-  onUpdateQty,
-  onRemoveCard,
-  onClear,
-  onHoverCard,
+  deck, cards, deckCount,
+  onSetCommander, onRemoveCommander,
+  onUpdateQty, onRemoveCard, onClear, onHoverCard,
 }) {
   return (
-    <aside
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--gold-dim)",
-        borderRadius: 8,
-        padding: "1.25rem",
-        position: "sticky",
-        top: "5rem",
-        height: "fit-content",
-        maxHeight: "calc(100vh - 6rem)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          paddingBottom: "0.75rem",
-          marginBottom: "0.75rem",
-          borderBottom: "1px solid var(--gold-dim)",
-        }}
-      >
+    <div className="card border-secondary sidebar-sticky">
+      <div className="card-header d-flex align-items-center justify-content-between border-secondary">
         <div>
-          <h3
-            style={{
-              fontFamily: "'Cinzel', serif",
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              color: "var(--gold-bright)",
-              textTransform: "uppercase",
-              letterSpacing: "0.07em",
-              margin: 0,
-            }}
-          >
+          <h6 className="mb-0 text-white fw-bold text-truncate" style={{ maxWidth: 160 }}>
             {deck?.name || "No Deck Selected"}
-          </h3>
-          <p style={{ fontStyle: "italic", fontSize: "0.8rem", color: "var(--text-muted)", margin: "2px 0 0" }}>
+          </h6>
+          <small className="text-muted fst-italic">
             {deckCount} cards · {cards.length} unique
-          </p>
+          </small>
         </div>
-        <button onClick={onClear} disabled={!deck || cards.length === 0} style={btnSmStyle}>
+        <button
+          className="btn btn-sm btn-outline-danger"
+          onClick={onClear}
+          disabled={!deck || cards.length === 0}
+        >
           Clear
         </button>
       </div>
 
-      {/* Commander section */}
+      {/* Commander */}
       {deck && (
-        <div
-          style={{
-            marginBottom: "0.75rem",
-            padding: "0.75rem",
-            borderRadius: 6,
-            border: "1px solid var(--gold-mid)",
-            background: "rgba(61,46,14,0.2)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-            <span style={sectionLabelStyle}>Commander</span>
-            <button onClick={onSetCommander} style={btnSmStyle}>
+        <div className="card-body border-bottom border-secondary pb-3">
+          <div className="d-flex align-items-center justify-content-between mb-2">
+            <span className="section-label">Commander</span>
+            <button className="btn btn-sm btn-outline-primary" onClick={onSetCommander}>
               {deck.commander ? "Change" : "Set"}
             </button>
           </div>
-
           {deck.commander ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "0.5rem",
-                padding: "0.4rem 0.6rem",
-                background: "var(--sunken)",
-                borderRadius: 4,
-                border: "1px solid var(--gold-dim)",
-              }}
-            >
-              <span style={{ fontStyle: "italic", fontWeight: 600, color: "var(--gold-light)", flex: 1, fontSize: "0.9rem" }}>
+            <div className="d-flex align-items-center justify-content-between bg-dark rounded p-2 border border-secondary">
+              <span className="text-info fst-italic small text-truncate me-2">
                 ⭐ {deck.commander}
               </span>
-              <button onClick={onRemoveCommander} style={removeBtnStyle}>×</button>
+              <button className="btn btn-sm btn-outline-danger py-0 px-1" onClick={onRemoveCommander}>
+                <i className="bi bi-x" />
+              </button>
             </div>
           ) : (
-            <p
-              style={{
-                textAlign: "center",
-                fontStyle: "italic",
-                fontSize: "0.8rem",
-                color: "var(--text-muted)",
-                padding: "0.5rem",
-                border: "1px dashed var(--gold-dim)",
-                borderRadius: 4,
-                margin: 0,
-              }}
-            >
+            <p className="text-muted small fst-italic text-center border border-secondary rounded p-2 mb-0">
               No commander set
             </p>
           )}
         </div>
       )}
 
-      {/* The 99 label */}
-      <span style={sectionLabelStyle}>The 99</span>
-
-      {/* Card list */}
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-        {cards.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "2rem 0", fontStyle: "italic", color: "var(--text-muted)", fontSize: "0.9rem" }}>
-            {deck ? "Click search results to add cards." : "Select a deck to get started."}
-          </div>
-        ) : (
-          cards.map((card) => (
-            <div
-              key={card._id}
-              onMouseEnter={() => onHoverCard(card)}
-              onMouseLeave={() => onHoverCard(null)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                padding: "0.35rem 0.5rem",
-                borderRadius: 4,
-                border: "1px solid var(--void)",
-                background: "var(--sunken)",
-              }}
-            >
-              <button onClick={() => onUpdateQty(card, card.quantity - 1)} style={qtyBtnStyle}>−</button>
-              <span style={{ fontFamily: "'Cinzel', serif", fontSize: "0.75rem", fontWeight: 600, color: "var(--gold)", minWidth: 16, textAlign: "center" }}>
-                {card.quantity}
-              </span>
-              <button onClick={() => onUpdateQty(card, card.quantity + 1)} style={qtyBtnStyle}>+</button>
-
-              <span
-                style={{
-                  flex: 1,
-                  fontSize: "0.9rem",
-                  color: "var(--text-primary)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
+      {/* The 99 */}
+      <div className="card-body p-2">
+        <p className="section-label px-1 mb-2">The 99</p>
+        <div className="deck-list-scroll d-flex flex-column gap-1">
+          {cards.length === 0 ? (
+            <p className="text-muted small fst-italic text-center py-3 mb-0">
+              {deck ? "Click search results to add cards." : "Select a deck to get started."}
+            </p>
+          ) : (
+            cards.map(card => (
+              <div
+                key={card._id}
+                className="d-flex align-items-center gap-1 p-1 rounded border border-secondary"
+                style={{ background: "rgba(0,0,0,0.3)" }}
+                onMouseEnter={() => onHoverCard(card)}
+                onMouseLeave={() => onHoverCard(null)}
               >
-                {card.card_name}
-              </span>
-
-              <button onClick={() => onRemoveCard(card)} style={removeBtnStyle}>×</button>
-            </div>
-          ))
-        )}
+                <button className="btn btn-sm btn-outline-secondary py-0 px-1"
+                        style={{ lineHeight: 1, minWidth: 22 }}
+                        onClick={() => onUpdateQty(card, card.quantity - 1)}>−</button>
+                <span className="text-primary fw-bold small text-center" style={{ minWidth: 16 }}>
+                  {card.quantity}
+                </span>
+                <button className="btn btn-sm btn-outline-secondary py-0 px-1"
+                        style={{ lineHeight: 1, minWidth: 22 }}
+                        onClick={() => onUpdateQty(card, card.quantity + 1)}>+</button>
+                <span className="flex-grow-1 small text-truncate text-light" style={{ fontSize: "0.82rem" }}>
+                  {card.card_name}
+                </span>
+                <button className="btn btn-sm btn-outline-danger py-0 px-1"
+                        style={{ lineHeight: 1 }}
+                        onClick={() => onRemoveCard(card)}>
+                  <i className="bi bi-x" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </aside>
+    </div>
   );
 }
-
-const sectionLabelStyle = {
-  display: "block",
-  fontFamily: "'Cinzel', serif",
-  fontSize: "0.65rem",
-  fontWeight: 600,
-  color: "var(--text-muted)",
-  textTransform: "uppercase",
-  letterSpacing: "0.1em",
-  marginBottom: "0.4rem",
-};
-
-const btnSmStyle = {
-  padding: "0.3rem 0.75rem",
-  borderRadius: 4,
-  border: "1px solid var(--gold)",
-  background: "var(--gold-mid)",
-  color: "var(--gold-light)",
-  fontFamily: "'Cinzel', serif",
-  fontSize: "0.65rem",
-  fontWeight: 600,
-  textTransform: "uppercase",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
-
-const qtyBtnStyle = {
-  width: 22,
-  height: 22,
-  borderRadius: 3,
-  border: "1px solid var(--gold-dim)",
-  background: "transparent",
-  color: "var(--gold-mid)",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "1rem",
-  fontWeight: 600,
-  lineHeight: 1,
-  flexShrink: 0,
-};
-
-const removeBtnStyle = {
-  width: 22,
-  height: 22,
-  borderRadius: 3,
-  border: "1px solid var(--gold-dim)",
-  background: "transparent",
-  color: "var(--text-muted)",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "1rem",
-  fontWeight: 600,
-  lineHeight: 1,
-  flexShrink: 0,
-};
