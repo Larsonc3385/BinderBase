@@ -1,41 +1,61 @@
-import Express from 'express'
-import cors from 'cors'
-import dotenv from 'dotenv'
-import morgan from 'morgan'
+require('dotenv').config()
 
-import deckRoutes from './routes/deck.js'
-import micRoutes from './routes/mic.js'
-import userRoutes from './routes/users.js'
+const express         = require('express')
+const { MongoClient } = require('mongodb')
 
-dotenv.config()
-const PORT = process.env.PORT || 3000
+// ── Routers ───────────────────────────────────────────────────────────────────
+const usersRouter       = require('./routes/usersRouter')
+const decksRouter       = require('./routes/decksRouter')
+const cardsRouter       = require('./routes/cardsRouter')
+const externalApiRouter = require('./routes/externalApiRouter')
+const adminRouter       = require('./routes/adminRouter')
 
-const app = new Express()
+const app  = express()
+const PORT = process.env.PORT || 4000
 
-app.use(cors({
-  origin: [
-    'https://binder-base.vercel.app',
-    'http://localhost:5173',
-  ]
-}))
+// ── Middleware ────────────────────────────────────────────────────────────────
+app.use(express.json())
+app.use(express.urlencoded({ extended: false }))  // for the admin HTML form
 
-app.use(morgan('dev'))
-app.use(Express.json())
-
-app.use('/mic', micRoutes)
-app.use('/users', userRoutes)
-app.use('/api', deckRoutes)
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'BinderBase API is running' })
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Headers', 'Content-Type')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  if (req.method === 'OPTIONS') return res.sendStatus(200)
+  next()
 })
 
-app.use((req, res) => {
-  res.status(404).json({ success: false, error: 'Endpoint not found' })
+// ── Mount routers ─────────────────────────────────────────────────────────────
+app.use('/users',        usersRouter)         // POST /users/login, /users/create
+app.use('/api/decks',    decksRouter)         // CRUD for decks + cards inside decks
+app.use('/api/cards',    cardsRouter)         // CRUD for the local card library
+app.use('/api/external', externalApiRouter)   // Scryfall + EDHREC proxy routes
+app.use('/admin',        adminRouter)         // Server-rendered HTML form routes
+
+app.get('/api/message', (_req, res) => {
+  res.json({ message: 'BinderBase API is running!' })
 })
 
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`)
-})
+// ── MongoDB + start ───────────────────────────────────────────────────────────
+const uri    = process.env.MONGODB_URI     || 'mongodb://localhost:27017'
+const dbName = process.env.MONGODB_DB_NAME || 'binderbase'
 
-export default app
+async function startServer() {
+  try {
+    const client = new MongoClient(uri)
+    await client.connect()
+    console.log('Connected to MongoDB')
+
+    app.locals.db = client.db(dbName)
+
+    app.listen(PORT, () => {
+      console.log(`Express API  →  http://localhost:${PORT}`)
+      console.log(`Admin panel  →  http://localhost:${PORT}/admin/new-deck`)
+    })
+  } catch (err) {
+    console.error('Failed to start server:', err)
+    process.exit(1)
+  }
+}
+
+startServer()
