@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 const API = "http://localhost:4000";
 
-// ai
+
 export default function CardDetailModal({ cardId, onClose }) {
   const [card, setCard]       = useState(null);
   const [loading, setLoading] = useState(true);

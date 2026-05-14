@@ -5,7 +5,6 @@ const Card         = require('../models/Card')
 const cardsRouter = Router()
 
 // GET /api/cards — summary list of all locally saved cards
-// ai
 cardsRouter.get('/', async (req, res) => {
   try {
     const cards = await Card(req.app.locals.db)
@@ -19,7 +18,6 @@ cardsRouter.get('/', async (req, res) => {
 })
 
 // GET /api/cards/:id — full details for one local card
-// ai
 cardsRouter.get('/:id', async (req, res) => {
   try {
     const card = await Card(req.app.locals.db)
@@ -33,7 +31,6 @@ cardsRouter.get('/:id', async (req, res) => {
 
 // POST /api/cards — import a card into the local library (from Scryfall search results)
 // Body should contain normalized card data (scryfallId, name, image, etc.)
-// ai
 cardsRouter.post('/', async (req, res) => {
   const { name, scryfallId } = req.body
   if (!name) return res.status(400).json({ success: false, error: 'Card name is required' })

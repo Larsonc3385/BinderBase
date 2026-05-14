@@ -11,7 +11,6 @@ const externalApiRouter = Router()
 // ── Scryfall: search ──────────────────────────────────────────────────────────
 
 // GET /api/external/search?q=
-// ai
 externalApiRouter.get('/search', async (req, res) => {
   const { q } = req.query
   if (!q) return res.status(400).json({ success: false, error: 'Query required' })
@@ -78,7 +77,6 @@ externalApiRouter.get('/named', async (req, res) => {
 // ── EDHREC: commander recommendations ────────────────────────────────────────
 
 // GET /api/external/recommendations/:commanderName
-// ai
 externalApiRouter.get('/recommendations/:commanderName', async (req, res) => {
   try {
     const slug = req.params.commanderName

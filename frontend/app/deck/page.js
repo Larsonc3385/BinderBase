@@ -11,7 +11,7 @@ import RecommendationsModal from "../components/RecommendationsModal";
 
 const API = "http://localhost:4000";
 
-// ai
+
 export default function DeckPage() {
   const router   = useRouter();
   const username = typeof window !== "undefined" ? localStorage.getItem("username") : null;
@@ -47,7 +47,7 @@ export default function DeckPage() {
     setTimeout(() => setFlash(null), 3000);
   }
 
-  // ai
+ 
   async function loadDecks() {
     try {
       const res  = await fetch(`${API}/api/decks?username=${encodeURIComponent(username || "")}`);
@@ -125,7 +125,6 @@ export default function DeckPage() {
     );
   }
 
-  // ai
   const filteredCards = useMemo(() => {
     let cards = searchResults;
     if (commanderColors.length > 0)

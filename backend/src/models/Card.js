@@ -16,7 +16,6 @@ function Card(db) {
  * Build a new card document ready for insertOne().
  * Normalizes data coming from Scryfall into a local shape.
  */
-// ai
 Card.fromScryfall = function (sfCard) {
   return {
     name:       sfCard.name,

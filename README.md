@@ -203,8 +203,3 @@ binderbase/
 - **Seed script** — `npm run seed` pre-populates the database with 10 real cards from Scryfall
 - **Request logging** — Morgan `dev` format logs every request with method, path, status, and response time
 
----
-
-## AI Use
-
-Functions and components written with AI assistance are marked with an `// ai` comment.

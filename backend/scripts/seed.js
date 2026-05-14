@@ -1,13 +1,4 @@
-/**
- * Seed script — populates MongoDB with starter data.
- * Run with: npm run seed
- *
- * Fetches a handful of iconic Commander cards from Scryfall
- * and saves them to the local cards collection, then creates
- * a sample deck.
- */
 
-// ai
 require('dotenv').config()
 
 const { MongoClient } = require('mongodb')
@@ -29,7 +20,7 @@ const SEED_CARDS = [
   'Cyclonic Rift',
 ]
 
-// ai
+
 async function fetchCard(name) {
   const res = await fetch(
     `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`

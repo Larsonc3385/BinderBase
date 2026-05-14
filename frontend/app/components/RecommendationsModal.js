@@ -12,7 +12,6 @@ const TABS = [
   { key: "lands",        label: "Lands" },
 ];
 
-// ai
 export default function RecommendationsModal({ recommendations, isLoading, onAddCard, onClose }) {
   const [activeTab, setActiveTab] = useState("topCards");
   const cards = recommendations?.[activeTab] || [];

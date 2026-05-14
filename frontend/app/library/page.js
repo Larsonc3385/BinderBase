@@ -6,7 +6,6 @@ import CardDetailModal from "../components/CardDetailModal";
 
 const API = "http://localhost:4000";
 
-// ai
 export default function LibraryPage() {
   const router   = useRouter();
   const username = typeof window !== "undefined" ? localStorage.getItem("username") : null;
@@ -31,7 +30,6 @@ export default function LibraryPage() {
     setTimeout(() => setFlash(null), 3000);
   }
 
-  // ai
   async function loadLibrary() {
     setLoadingLib(true);
     try {
@@ -53,7 +51,6 @@ export default function LibraryPage() {
     finally { setIsSearching(false); }
   }
 
-  // ai
   async function importCard(card) {
     setImportingId(card.scryfallId);
     try {

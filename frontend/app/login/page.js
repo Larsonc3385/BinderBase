@@ -36,7 +36,6 @@ export default function LoginPage() {
     } finally { setLoading(false); }
   }
 
-  // ai
   async function handleSignup(e) {
     e.preventDefault();
     setError(null);

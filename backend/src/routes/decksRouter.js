@@ -74,7 +74,6 @@ decksRouter.put('/:id/commander', async (req, res) => {
 // ── Cards ─────────────────────────────────────────────────────────────────────
 
 // POST /api/decks/:id/cards
-// ai
 decksRouter.post('/:id/cards', async (req, res) => {
   const { cardName, quantity = 1 } = req.body
   if (!cardName) return res.status(400).json({ success: false, error: 'Card name required' })
