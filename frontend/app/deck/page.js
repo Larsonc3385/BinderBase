@@ -25,6 +25,7 @@ export default function DeckPage() {
   const [selectedColors, setSelectedColors]   = useState([]);
   const [commanderColors, setCommanderColors] = useState([]);
   const [hoveredCard, setHoveredCard]         = useState(null);
+  const [commanderImage, setCommanderImage]   = useState(null);
   const [flash, setFlash]                     = useState(null);
   const [showNewDeckInput, setShowNewDeckInput] = useState(false);
   const [newDeckName, setNewDeckName]         = useState("");
@@ -76,6 +77,7 @@ export default function DeckPage() {
       if (data.cards?.length > 0) {
         const colors = data.cards[0].colors || [];
         setCommanderColors(colors); setSelectedColors([...colors]);
+        setCommanderImage(data.cards[0].image || null);
       }
     } catch (_) {}
   }
@@ -184,6 +186,7 @@ export default function DeckPage() {
       setCurrentDeck(prev => ({ ...prev, commander: card.name }));
       const colors = card.colors || [];
       setCommanderColors(colors); setSelectedColors([...colors]);
+      setCommanderImage(card.image || null);
       setShowCommander(false);
       showFlash(`${card.name} set as commander`);
     } catch (err) { showFlash(err.message, "danger"); }
@@ -198,6 +201,7 @@ export default function DeckPage() {
       });
       setCurrentDeck(prev => ({ ...prev, commander: null }));
       setCommanderColors([]); setSelectedColors([]);
+      setCommanderImage(null);
       showFlash("Commander removed");
     } catch (err) { showFlash(err.message, "danger"); }
   }
@@ -310,6 +314,7 @@ export default function DeckPage() {
           <div className="col-12 col-lg-3">
             <DeckPanel
               deck={currentDeck} cards={deckCards} deckCount={deckCount}
+              commanderImage={commanderImage}
               onSetCommander={() => setShowCommander(true)}
               onRemoveCommander={removeCommander}
               onUpdateQty={updateQty} onRemoveCard={removeCard}

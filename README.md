@@ -1,121 +1,107 @@
 # BinderBase
 
-A modern, feature-rich Magic: The Gathering deck builder with an intuitive interface and powerful card management tools.
+A full-stack Magic: The Gathering Commander deck builder and card library.
 
-## Features
+Search cards from Scryfall, build a local library, and organize them into Commander decks — all through a React frontend backed by Express and MongoDB.
 
-### 🎴 Deck Management
-- Create and manage multiple Commander format decks
-- Set and manage commanders with automatic color identity enforcement
-- Add, remove, and adjust card quantities
-- Real-time deck statistics (total cards, unique cards)
-- Clear deck functionality
-
-### 🔍 Card Search & Filtering
-- Search cards by name using the Scryfall API
-- Filter by color identity
-- Automatic filtering based on commander's color identity
-- Card image preview on hover
-- Support for colorless cards
-
-### 💡 Smart Recommendations
-- Get AI-powered card suggestions based on your deck
-- Multiple recommendation types:
-  - **Top Cards**: Most played cards in similar decks
-  - **Creatures**: Creature recommendations
-  - **Instants & Sorceries**: Spell recommendations
-  - **Lands**: Land recommendations
-  - **High Synergy**: Cards with strong synergy with your deck
-  - **Budget Options**: Cost-effective alternatives
-- View inclusion rates and synergy scores
-- One-click card addition from recommendations
-
-### ⚡ Commander Format Support
-- Enforce commander color identity rules
-- Automatic color filtering when commander is set
-- Visual indicators for commander colors
-- Commander card preview on hover
+---
 
 ## Tech Stack
 
-### Frontend
-- **Vue 3** - Progressive JavaScript framework with Composition API
-- **Vite** - Next-generation frontend build tool
-- **Custom CSS** - Modern, gaming-inspired stylesheet
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 via Next.js 16 (App Router) |
+| Styling | Bootstrap 5 — Bootswatch Vapor theme (CDN) + Bootstrap Icons |
+| Backend | Node.js, Express 4, Express Router |
+| Database | MongoDB (native driver — no Mongoose) |
+| External APIs | Scryfall (cards), EDHREC (recommendations) — both proxied through the backend |
+| HTTP | Browser `fetch` API with JSON |
 
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express** - Web application framework
-- **Supabase** - Cloud PostgreSQL database for deck storage
-- **Scryfall API** - MTG card data and images
-- **EDHREC API** - Deck recommendations and statistics
+---
 
-### Architecture
-- RESTful API design
-- Separation of concerns (frontend/backend)
-- Service-based backend architecture
-- Reactive state management with Vue refs
+## Prerequisites
+
+- **Node.js v20 or higher** (`node -v` to check)
+- **MongoDB** running locally on port `27017`, or a MongoDB Atlas URI
+- **MongoDB Compass** (optional, recommended for viewing data)
+
+---
 
 ## Installation
 
-### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+```bash
+# 1. Clone the repo
+git clone <your-repo-url>
+cd binderbase
 
-### Setup
+# 2. Set up backend environment
+cd backend
+cp .env.example .env
+# Edit .env with your values (see Environment Variables below)
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/binderbase.git
-   cd binderbase
-   ```
+# 3. Install backend dependencies
+npm install
 
-2. **Set up Supabase**
-   - Create a free account at [supabase.com](https://supabase.com)
-   - Create a new project
-   - Copy your project URL and anon key
-   - Create the database tables (see Database Schema section)
+# 4. Install frontend dependencies
+cd ../frontend
+npm install
+```
 
-3. **Configure environment variables**
-   Create a `.env` file in the backend directory:
-   ```bash
-   cd backend
-   touch .env
-   ```
-   
-   Add your Supabase credentials:
-   ```
-   SUPABASE_URL=your_supabase_project_url
-   SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
+---
 
-4. **Install backend dependencies**
-   ```bash
-   npm install
-   ```
+## Running the App
 
-5. **Install frontend dependencies**
-   ```bash
-   cd ../frontend
-   npm install
-   ```
+You need **two terminals** running at the same time.
 
-6. **Start the backend server**
-   ```bash
-   cd ../backend
-   npm start
-   # Server runs on http://localhost:3000
-   ```
+**Terminal 1 — backend (port 4000)**
+```bash
+cd backend
+npm run dev
+```
 
-7. **Start the frontend development server**
-   ```bash
-   cd ../frontend
-   npm run dev
-   # Frontend runs on http://localhost:5173
-   ```
+You should see:
+```
+✅ Connected to MongoDB  →  Binderbase
+✅ Express API  →  http://localhost:4000
+✅ Admin panel  →  http://localhost:4000/admin/new-deck
+```
 
-8. **Open your browser**
-   Navigate to `http://localhost:5173`
+**Terminal 2 — frontend (port 3000)**
+```bash
+cd frontend
+npm run dev
+```
+
+Then open **http://localhost:3000** in your browser.
+
+---
+
+## Seeding the Database
+
+Populates MongoDB with 10 iconic Commander staples and a sample deck:
+
+```bash
+cd backend
+npm run seed
+```
+
+Fetches real card data from Scryfall so you need an internet connection. Safe to run multiple times — clears previous seed data before inserting. Seeded cards will appear in the Library page after logging in.
+
+---
+
+## Environment Variables
+
+Copy `backend/.env.example` to `backend/.env`:
+
+| Variable | Example Value | Description |
+|---|---|---|
+| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGODB_DB_NAME` | `Binderbase` | Name of the database (case sensitive) |
+| `PORT` | `4000` | Port the Express server listens on |
+
+> **Note:** The database name is case sensitive. Whatever you set here must match what was used when seeding. The default is `Binderbase` with a capital B.
+
+---
 
 ## Project Structure
 
@@ -123,260 +109,102 @@ A modern, feature-rich Magic: The Gathering deck builder with an intuitive inter
 binderbase/
 ├── backend/
 │   ├── src/
-│   │   ├── routes/          # API route handlers
-│   │   ├── services/        # Business logic
-│   │   │   ├── deckService.js
-│   │   │   ├── scryfallService.js
-│   │   │   └── recommendationsService.js
-│   │   ├── db/              # Supabase client
-│   │   └── server.js        # Express server
-│   ├── .env                 # Environment variables (Supabase credentials)
+│   │   ├── server.js                  # Express entry point — mounts all routers, Morgan logging
+│   │   ├── models/
+│   │   │   ├── Card.js                # Local card library collection + factory functions
+│   │   │   ├── Deck.js                # Deck collection + factory functions
+│   │   │   └── User.js                # User collection + factory functions
+│   │   └── routes/
+│   │       ├── cardsRouter.js         # GET/POST/DELETE /api/cards (local library)
+│   │       ├── decksRouter.js         # Full CRUD /api/decks + cards inside decks
+│   │       ├── externalApiRouter.js   # Scryfall + EDHREC proxy — browser never calls these directly
+│   │       ├── usersRouter.js         # POST /users/login and /users/create
+│   │       └── adminRouter.js         # Server-rendered HTML form (no React, no fetch)
+│   ├── scripts/
+│   │   └── seed.js                    # npm run seed — populates cards + sample deck
+│   ├── .env.example
 │   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   └── deckPage.vue # Main deck builder component
-│   │   ├── services/
-│   │   │   └── api.js       # API client
-│   │   ├── styles.css       # Global styles
-│   │   └── main.js          # Vue app entry
-│   └── package.json
-└── README.md
+│
+└── frontend/
+    └── app/
+        ├── layout.js                  # Root layout — loads Vapor Bootstrap + Bootstrap Icons via CDN
+        ├── page.js                    # Root — redirects to /login
+        ├── globals.css                # Minimal global styles + Bootstrap overrides
+        ├── login/
+        │   └── page.js                # Login and signup forms
+        ├── library/
+        │   └── page.js                # Card library — search Scryfall, import, list, detail view
+        ├── deck/
+        │   └── page.js                # Deck builder — create decks, add cards, set commander
+        └── components/
+            ├── CardDetailModal.js     # Fetches GET /api/cards/:id and shows full card details
+            ├── CardGrid.js            # Responsive grid of search result cards
+            ├── CommanderModal.js      # Search and select a commander
+            ├── DeckPanel.js           # Deck sidebar — commander hover preview, card list, qty controls
+            ├── DeckSelectorModal.js   # Pick or delete a deck
+            ├── RecommendationsModal.js # EDHREC suggestions tabbed by card type
+            └── SearchSidebar.js       # Card search input + color identity filter chips
 ```
-
-## API Endpoints
-
-### Decks
-- `GET /api/decks` - Get all decks
-- `GET /api/decks/:id` - Get deck by ID
-- `POST /api/decks` - Create new deck
-- `PUT /api/decks/:id` - Update deck
-- `DELETE /api/decks/:id` - Delete deck
-- `POST /api/decks/:id/cards` - Add card to deck
-- `PUT /api/decks/:id/cards/:cardName` - Update card quantity
-- `DELETE /api/decks/:id/cards/:cardName` - Remove card from deck
-- `POST /api/decks/:id/commander` - Set commander
-- `DELETE /api/decks/:id/commander` - Remove commander
-
-### Cards
-- `GET /api/cards/search?q=:query` - Search cards by name
-
-### Recommendations
-- `GET /api/recommendations/:deckId` - Get deck recommendations
-
-## Usage Guide
-
-### Creating a Deck
-
-1. Click the **"+ New Deck"** button in the header
-2. Enter a deck name
-3. Click **"Create"**
-4. Your new deck will be automatically selected
-
-### Setting a Commander
-
-1. Select a deck using the **"Select Deck"** dropdown
-2. Click **"Set Commander"** in the Commander section
-3. Search for a legendary creature
-4. Click on a card to set it as your commander
-5. Color filters will automatically update to match commander colors
-
-### Adding Cards
-
-1. Use the search bar to find cards
-2. Select color filters (or let commander colors auto-filter)
-3. Click on a card in the search results to add it to your deck
-4. Use **+** and **-** buttons to adjust quantities
-5. Click **×** to remove a card
-
-### Getting Recommendations
-
-1. Click the **"💡 Suggestions"** button
-2. Browse recommendations by category
-3. Hover over cards to see preview images
-4. Click **"Add to Deck"** to add recommended cards
-
-### Commander Color Identity Rules
-
-When a commander is set:
-- Only cards matching the commander's color identity can be added
-- Color filters are automatically restricted to commander colors
-- Colorless cards are always legal
-- Cards with colors outside the commander's identity are filtered out
-
-## Color Identity System
-
-BinderBase uses Magic's color identity rules:
-
-- **W** - White (Plains)
-- **U** - Blue (Island)
-- **B** - Black (Swamp)
-- **R** - Red (Mountain)
-- **G** - Green (Forest)
-
-Commander color identity includes:
-- Mana symbols in the mana cost
-- Mana symbols in rules text
-- Color indicators
-- Both faces of transform/modal cards
-
-## Development
-
-### Backend Development
-
-```bash
-cd backend
-npm run dev  # Run with nodemon for auto-restart
-```
-
-### Frontend Development
-
-```bash
-cd frontend
-npm run dev  # Run with Vite HMR
-```
-
-## Configuration
-
-### Environment Variables
-Create a `.env` file in the backend directory with:
-
-```env
-# Supabase Configuration
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
-
-# Server Configuration (optional)
-PORT=3000
-```
-
-**Important**: Never commit your `.env` file to version control. Add it to `.gitignore`:
-```
-.env
-```
-
-### Backend Configuration
-Edit `backend/src/server.js` to configure:
-- Port (default: 3000)
-- CORS settings
-- API endpoints
-
-### Frontend Configuration
-Edit `frontend/vite.config.js` to configure:
-- Dev server port
-- API proxy settings
-- Build options
-
-## Database Schema
-
-BinderBase uses Supabase (PostgreSQL) for data storage. Create these tables in your Supabase project:
-
-### Decks Table
-```sql
-CREATE TABLE decks (
-  id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  format TEXT DEFAULT 'Commander',
-  commander TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### Cards Table
-```sql
-CREATE TABLE cards (
-  id BIGSERIAL PRIMARY KEY,
-  deck_id BIGINT NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
-  card_name TEXT NOT NULL,
-  quantity INTEGER DEFAULT 1,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### Creating Tables in Supabase
-
-1. Go to your Supabase project dashboard
-2. Click on "SQL Editor" in the left sidebar
-3. Create a new query
-4. Copy and paste the SQL above
-5. Click "Run" to execute
-
-Alternatively, use the Supabase Table Editor to create tables visually.
-
-## Known Issues & Limitations
-
-### Current Limitations
-- Only Commander format is supported
-- Commander name text may not wrap properly in the display box (minor UI issue)
-- Recommendations require active internet connection
-
-### Browser Compatibility
-- Modern browsers (Chrome, Firefox, Edge, Brave, Safari)
-- Vue Devtools extension may show a badge (can be disabled in browser extensions)
-
-## Troubleshooting
-
-### Cards not appearing in search
-- Check that the backend server is running on port 3000
-- Verify internet connection (Scryfall API required)
-- Check browser console for errors
-
-### Color filtering not working
-- Ensure commander is set correctly
-- Check backend logs for color_identity data
-- Verify the backend is using the updated scryfallService.js with color_identity support
-
-### Database connection errors
-- Verify your `.env` file has correct Supabase credentials
-- Check that your Supabase project is active
-- Ensure tables have been created in Supabase
-- Check Supabase dashboard for any connection issues
-- Verify your IP isn't blocked by Supabase security rules
-
-### "Failed to fetch" errors
-- Confirm backend server is running
-- Check that SUPABASE_URL and SUPABASE_ANON_KEY are correct
-- Test Supabase connection in SQL Editor
-
-### Frontend not connecting to backend
-- Verify backend is running on http://localhost:3000
-- Check CORS settings in server.js
-- Inspect network tab in browser DevTools
-
-### Planned Features
-- [ ] Deck import/export (text, MTGO, Arena)
-- [ ] Price tracking integration
-- [ ] Deck statistics and analysis
-- [ ] Card categorization (by type, CMC, etc.)
-- [ ] Mana curve visualization
-- [ ] Deck sharing and collaboration
-- [ ] Mobile-responsive design improvements
-- [ ] Dark/light theme toggle
-- [ ] Card collection management
-- [ ] Advanced filtering (by type, CMC, rarity, etc.)
-- [ ] Ban-list integration/toggle to allow banned cards in library
-
-### UI Improvements
-- [ ] Fix commander name wrapping
-- [ ] Add loading states
-- [ ] Improve error messages
-- [ ] Add keyboard shortcuts
-- [ ] Implement drag-and-drop card organization
-
-## Acknowledgments
-
-- **Scryfall** - For their amazing MTG card database and API
-- **EDHREC** - For deck recommendations and statistics
-- **Vue.js Team** - For the excellent framework
-- **MTG Community** - For inspiration and feedback
-
-## Contact
-
-- **Project Link**: [https://github.com/yourusername/binderbase](https://github.com/yourusername/binderbase)
-- **Issues**: [https://github.com/yourusername/binderbase/issues](https://github.com/yourusername/binderbase/issues)
 
 ---
 
-**Built to enhance the deck-building experience for the commander format of MTG!**
+## API Reference
 
-*Wizards of the Coast, Magic: The Gathering, and their logos are trademarks of Wizards of the Coast LLC. BinderBase is not affiliated with or endorsed by Wizards of the Coast.*
+### Auth — `/users`
+| Method | Path | Description |
+|---|---|---|
+| POST | `/users/login` | Log in with username + password |
+| POST | `/users/create` | Create a new account |
+
+### Local Card Library — `/api/cards`
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/cards` | Summary list of all locally saved cards |
+| GET | `/api/cards/:id` | Full details for one card (used by detail modal) |
+| POST | `/api/cards` | Import a card from Scryfall into the local library |
+| DELETE | `/api/cards/:id` | Remove a card from the library |
+
+### Decks — `/api/decks`
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/decks` | List all decks (filter by `?username=`) |
+| POST | `/api/decks` | Create a new deck |
+| GET | `/api/decks/:id` | Get a deck with its full card list |
+| DELETE | `/api/decks/:id` | Delete a deck |
+| PUT | `/api/decks/:id/commander` | Set or clear the commander |
+| POST | `/api/decks/:id/cards` | Add a card to a deck (fetches from Scryfall server-side) |
+| PUT | `/api/decks/:id/cards/:cardId` | Update card quantity |
+| DELETE | `/api/decks/:id/cards/:cardId` | Remove a card from a deck |
+
+### External API Proxy — `/api/external`
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/external/search?q=` | Search Scryfall by query |
+| GET | `/api/external/named?name=` | Fetch one card by exact name |
+| GET | `/api/external/recommendations/:name` | EDHREC commander recommendations |
+
+### Admin (server-rendered HTML forms) — `/admin`
+| Method | Path | Description |
+|---|---|---|
+| GET | `/admin/new-deck` | Serves a plain HTML `<form>` — no React, no fetch |
+| POST | `/admin/new-deck` | Reads URL-encoded body, inserts deck to MongoDB, redirects |
+| GET | `/admin/decks` | Plain HTML table listing all decks |
+
+---
+
+## Features
+
+- **Login / Signup** — accounts stored in MongoDB with bcrypt-hashed passwords
+- **Card Library** — search Scryfall, import cards into local MongoDB collection, view full card details in a modal
+- **Deck Builder** — create multiple Commander decks, add/remove cards, adjust quantities
+- **Commander support** — set a commander, auto-filter cards by color identity, hover to preview commander card image
+- **EDHREC Recommendations** — get card suggestions by type (creatures, instants, lands, etc.) based on your commander
+- **Admin panel** — server-rendered HTML form at `/admin/new-deck` with URL-encoded POST and redirect
+- **Seed script** — `npm run seed` pre-populates the database with 10 real cards from Scryfall
+- **Request logging** — Morgan `dev` format logs every request with method, path, status, and response time
+
+---
+
+## AI Use
+
+Functions and components written with AI assistance are marked with an `// ai` comment.

@@ -2,6 +2,7 @@
 
 export default function DeckPanel({
   deck, cards, deckCount,
+  commanderImage,
   onSetCommander, onRemoveCommander,
   onUpdateQty, onRemoveCard, onClear, onHoverCard,
 }) {
@@ -36,7 +37,10 @@ export default function DeckPanel({
           </div>
           {deck.commander ? (
             <div className="d-flex align-items-center justify-content-between bg-dark rounded p-2 border border-secondary">
-              <span className="text-info fst-italic small text-truncate me-2">
+              <span className="text-info fst-italic small text-truncate me-2"
+                    style={{ cursor: "help" }}
+                    onMouseEnter={() => commanderImage && onHoverCard({ image: commanderImage, name: deck.commander })}
+                    onMouseLeave={() => onHoverCard(null)}>
                 ⭐ {deck.commander}
               </span>
               <button className="btn btn-sm btn-outline-danger py-0 px-1" onClick={onRemoveCommander}>
